@@ -132,7 +132,10 @@ class AtomicPluginInstaller(
 			}
 			throw failure
 		} finally {
-			if (!marker.exists() || marker.readLines().getOrNull(1) != State.COMMITTED.name) {
+			val committed =
+				marker.exists() &&
+					runCatching { marker.readLines().getOrNull(1) == State.COMMITTED.name }.getOrDefault(false)
+			if (!committed) {
 				staged.delete()
 				// Keep the only previous package if rollback itself failed; startup completes it.
 				if (!backup.exists()) marker.delete()
@@ -158,11 +161,16 @@ class AtomicPluginInstaller(
 		pluginId: String,
 		state: State,
 	) {
-		FileOutputStream(marker, false).use { output ->
-			output.write("$pluginId\n${state.name}\n".toByteArray())
-			output.fd.sync()
+		val temporary = File(marker.parentFile, "${marker.name}.tmp")
+		try {
+			FileOutputStream(temporary, false).use { output ->
+				output.write("$pluginId\n${state.name}\n".toByteArray())
+				output.fd.sync()
+			}
+			move(temporary, marker)
+		} finally {
+			temporary.delete()
 		}
-		fsyncDirectory(marker.parentFile)
 	}
 
 	private fun move(
@@ -204,6 +212,9 @@ class AtomicPluginInstaller(
 			if (!transactions.isDirectory) return
 
 			transactions.listFiles { file -> file.name.endsWith(MARKER_SUFFIX) }.orEmpty().forEach { marker ->
+				if (Files.isSymbolicLink(marker.toPath()) || !marker.isFile) {
+					throw SecurityException("Plugin transaction marker must be a regular file")
+				}
 				val lines = marker.readLines()
 				val pluginId = lines.firstOrNull()?.trim().orEmpty()
 				if (!PluginIdValidator.isValid(pluginId)) {
@@ -216,18 +227,27 @@ class AtomicPluginInstaller(
 
 				when (state) {
 					State.COMMITTED.name -> {
-						if (backup.exists() && !backup.delete()) return@forEach
+						if (!target.exists() && backup.exists()) {
+							requireRegularBackup(backup)
+							moveRecovered(backup, target)
+						} else if (backup.exists() && !backup.delete()) {
+							return@forEach
+						}
 					}
 					State.PREPARED.name -> Unit
 					State.ROLLING_BACK.name -> {
 						if (backup.exists()) {
+							requireRegularBackup(backup)
 							target.delete()
 							moveRecovered(backup, target)
 						}
 					}
 					State.ACTIVATING.name -> {
 						target.delete()
-						if (backup.exists()) moveRecovered(backup, target)
+						if (backup.exists()) {
+							requireRegularBackup(backup)
+							moveRecovered(backup, target)
+						}
 					}
 					else -> throw IllegalStateException("Unknown plugin transaction state: $state")
 				}
@@ -243,6 +263,7 @@ class AtomicPluginInstaller(
 					throw IllegalStateException("Invalid orphaned plugin backup: ${backup.name}")
 				}
 				val target = requireInside(pluginsDir, File(pluginsDir, "$pluginId.$PLUGIN_ARCHIVE_EXTENSION"))
+				requireRegularBackup(backup)
 				target.delete()
 				moveRecovered(backup, target)
 			}
@@ -254,6 +275,12 @@ class AtomicPluginInstaller(
 			fsyncDirectory(pluginsDir)
 			fsyncDirectory(transactions)
 			if (transactions.listFiles().isNullOrEmpty()) transactions.delete()
+		}
+
+		private fun requireRegularBackup(backup: File) {
+			if (Files.isSymbolicLink(backup.toPath()) || !backup.isFile) {
+				throw SecurityException("Plugin transaction backup must be a regular file")
+			}
 		}
 
 		private fun moveRecovered(source: File, destination: File) {

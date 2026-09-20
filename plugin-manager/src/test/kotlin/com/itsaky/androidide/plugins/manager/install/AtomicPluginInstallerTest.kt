@@ -175,6 +175,16 @@ class AtomicPluginInstallerTest {
 	}
 
 	@Test
+	fun `startup recovery restores backup when committed target is missing`() {
+		val transactions = File(pluginsDir(), ".transactions").apply { mkdirs() }
+		File(transactions, "$pluginId.previous.cgp").writeText("old")
+		File(transactions, "$pluginId.transaction").writeText("$pluginId\nCOMMITTED\n")
+		AtomicPluginInstaller.recoverInterruptedTransactions(pluginsDir())
+		assertThat(installedFile().readText()).isEqualTo("old")
+		assertThat(transactions.exists()).isFalse()
+	}
+
+	@Test
 	fun `startup recovery removes interrupted first install`() {
 		val transactions = File(pluginsDir(), ".transactions").apply { mkdirs() }
 		installed("unverified")
