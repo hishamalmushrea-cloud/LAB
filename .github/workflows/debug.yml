@@ -81,13 +81,15 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          if ! ./gradlew :plugin-manager:testV8DebugUnitTest --stacktrace --no-daemon \
+          if ! ./gradlew :plugin-manager:testV8DebugUnitTest --no-daemon \
             2>&1 | tee plugin-manager-tests.log; then
             python3 - plugin-manager-tests.log 'Plugin-manager verification failed' <<'PY'
           import sys
           path, title = sys.argv[1:]
           lines = open(path, errors='replace').read().splitlines()
-          text = '\n'.join([line for line in lines if not line.startswith('w: ')][-180:])
+          errors = [line for line in lines if line.startswith(('e: ', 'error: '))]
+          tail = [line for line in lines if not line.startswith('w: ')][-100:]
+          text = '\n'.join(errors[-100:] + ['--- build tail ---'] + tail)
           for index in range(0, len(text), 3000):
               chunk = text[index:index + 3000]
               chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
@@ -133,13 +135,15 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          if ! ./gradlew :app:compileV8DebugKotlin --stacktrace --no-daemon \
+          if ! ./gradlew :app:compileV8DebugKotlin --no-daemon \
             2>&1 | tee app-compile.log; then
             python3 - app-compile.log 'App integration compilation failed' <<'PY'
           import sys
           path, title = sys.argv[1:]
           lines = open(path, errors='replace').read().splitlines()
-          text = '\n'.join([line for line in lines if not line.startswith('w: ')][-180:])
+          errors = [line for line in lines if line.startswith(('e: ', 'error: '))]
+          tail = [line for line in lines if not line.startswith('w: ')][-100:]
+          text = '\n'.join(errors[-100:] + ['--- build tail ---'] + tail)
           for index in range(0, len(text), 3000):
               chunk = text[index:index + 3000]
               chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
