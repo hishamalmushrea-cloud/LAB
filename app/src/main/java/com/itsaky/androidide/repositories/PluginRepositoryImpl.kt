@@ -149,10 +149,11 @@ class PluginRepositoryImpl(
 										"Could not restore enabled state for $pluginId"
 									}
 								}
-								}
 							}
-						},
-					)
+						}
+					},
+				)
+				Unit
 			}.onFailure { exception ->
 				Log.e(TAG, "Failed to install plugin from file: ${pluginFile.absolutePath}", exception)
 			}
