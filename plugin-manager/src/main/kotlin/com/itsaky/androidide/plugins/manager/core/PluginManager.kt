@@ -613,7 +613,7 @@ class PluginManager private constructor(
 			val (manifest, pluginLoader) =
 				loadAndValidate(file).getOrElse { return Result.failure(it) }
 			requireTrustedPackage(file, manifest, pluginLoader)
-			if (manifest.id in loadedPlugins) {
+			if (loadedPlugins.containsKey(manifest.id)) {
 				return Result.failure(IllegalStateException("Plugin ${manifest.id} is already loaded"))
 			}
 			manifest.dependencies.forEach { dependencyId ->
@@ -766,7 +766,7 @@ class PluginManager private constructor(
 			Result.success(plugin)
 		} catch (e: Throwable) {
 			loadedPluginId?.let { pluginId ->
-				if (pluginId in loadedPlugins) unloadPlugin(pluginId)
+				if (loadedPlugins.containsKey(pluginId)) unloadPlugin(pluginId)
 			}
 			reservedSlotsPluginId?.let { pluginId ->
 				SidebarSlotManager.releasePluginSlots(pluginId)
