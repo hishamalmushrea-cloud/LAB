@@ -78,6 +78,31 @@ jobs:
       - name: Configure the complete Gradle graph
         run: ./gradlew projects --stacktrace --no-daemon
 
+      - name: Run plugin-manager unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! ./gradlew :plugin-manager:testV8DebugUnitTest --stacktrace --no-daemon \
+            2>&1 | tee plugin-manager-tests.log; then
+            python3 - plugin-manager-tests.log 'Plugin-manager verification failed' <<'PY'
+          import re
+          import sys
+          path, title = sys.argv[1:]
+          lines = open(path, errors='replace').read().splitlines()
+          selected = [line for line in lines if re.search(r'(^e: |\.kt:\d+|FAILURE:|Execution failed|What went wrong|error:)', line, re.I)]
+          text = '\n'.join((selected or lines)[-120:])
+          text = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          print(f'::error title={title}::{text}')
+          PY
+            {
+              echo '## Plugin-manager verification failure'
+              echo '```text'
+              tail -n 400 plugin-manager-tests.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
       - name: Create non-secret app test configuration
         shell: bash
         run: |
@@ -105,18 +130,26 @@ jobs:
           SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
           "$SDKMANAGER" 'ndk;29.0.14206865' 'cmake;3.22.1'
 
-      - name: Test plugin hardening and compile its app integration
+      - name: Compile plugin app integration
         shell: bash
         run: |
           set -o pipefail
-          if ! ./gradlew \
-            :plugin-manager:testV8DebugUnitTest \
-            :app:compileV8DebugKotlin \
-            --stacktrace --no-daemon 2>&1 | tee gradle-verification.log; then
+          if ! ./gradlew :app:compileV8DebugKotlin --stacktrace --no-daemon \
+            2>&1 | tee app-compile.log; then
+            python3 - app-compile.log 'App integration compilation failed' <<'PY'
+          import re
+          import sys
+          path, title = sys.argv[1:]
+          lines = open(path, errors='replace').read().splitlines()
+          selected = [line for line in lines if re.search(r'(^e: |\.kt:\d+|FAILURE:|Execution failed|What went wrong|error:)', line, re.I)]
+          text = '\n'.join((selected or lines)[-120:])
+          text = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          print(f'::error title={title}::{text}')
+          PY
             {
-              echo '## Gradle verification failure'
+              echo '## App integration compilation failure'
               echo '```text'
-              tail -n 400 gradle-verification.log
+              tail -n 400 app-compile.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
@@ -127,10 +160,16 @@ jobs:
         run: |
           set -o pipefail
           if ! ./gradlew spotlessCheck --stacktrace --no-daemon 2>&1 | tee spotless.log; then
+            ./gradlew spotlessApply --no-daemon >/dev/null 2>&1 || true
+            patch="$(git diff --no-color | tail -n 1200)"
+            escaped="${patch//'%'/'%25'}"
+            escaped="${escaped//$'\r'/'%0D'}"
+            escaped="${escaped//$'\n'/'%0A'}"
+            echo "::error title=Spotless formatting failed::$escaped"
             {
-              echo '## Spotless failure'
-              echo '```text'
-              tail -n 300 spotless.log
+              echo '## Spotless failure and formatter patch'
+              echo '```diff'
+              git diff --no-color
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
