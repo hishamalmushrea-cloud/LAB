@@ -74,7 +74,10 @@ jobs:
 
       - name: Install native toolchain for app tests
         if: inputs.suite == 'phase-one'
-        run: sdkmanager 'ndk;29.0.14206865' 'cmake;3.22.1'
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" 'ndk;29.0.14206865' 'cmake;3.22.1'
 
       - name: Create non-secret Firebase test configuration
         if: inputs.suite == 'phase-one'
