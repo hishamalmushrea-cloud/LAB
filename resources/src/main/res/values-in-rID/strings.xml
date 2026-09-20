@@ -883,6 +883,7 @@
 	<string name="cd_toolbar_undo">Urung</string>
 	<string name="cd_toolbar_redo">Ulang</string>
 	<string name="cd_toolbar_save">Simpan</string>
+	<string name="cd_toolbar_preview_layout">Pratinjau layout</string>
 	<string name="cd_toolbar_find">Cari</string>
 	<string name="cd_toolbar_find_in_file">Cari dalam file</string>
 	<string name="cd_toolbar_find_in_project">Cari dalam proyek</string>

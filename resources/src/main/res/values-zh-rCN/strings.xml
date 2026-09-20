@@ -947,6 +947,7 @@
 	<string name="cd_toolbar_undo">撤销</string>
 	<string name="cd_toolbar_redo">重做</string>
 	<string name="cd_toolbar_save">保存</string>
+	<string name="cd_toolbar_preview_layout">预览布局</string>
 	<string name="cd_toolbar_find">查找</string>
 	<string name="cd_toolbar_find_in_file">在文件中查找</string>
 	<string name="cd_toolbar_find_in_project">在项目中查找</string>
