@@ -75,9 +75,8 @@ jobs:
             python3 scripts/validate_repository_structure.py
           fi
 
-      - name: Configure the complete Gradle graph
-        run: ./gradlew projects --stacktrace --no-daemon
-
+      # The targeted Gradle tasks below configure the same complete multi-project graph; avoid a
+      # separate `projects` daemon invocation so compiler feedback arrives several minutes sooner.
       - name: Run plugin-manager unit tests
         shell: bash
         run: |
