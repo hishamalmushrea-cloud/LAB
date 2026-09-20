@@ -13,7 +13,13 @@ jobs:
   lint_branch_name:
     name: Check external PR branch name
     runs-on: ubuntu-latest
-    if: github.event.pull_request.head.repo.full_name != github.repository
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
+      && (
+        github.event.pull_request.head.repo.full_name != github.repository
+      )
     steps:
       - name: Ask external contributors to use the community/ prefix
         uses: actions/github-script@v7

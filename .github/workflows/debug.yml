@@ -13,6 +13,11 @@ on:
 
   workflow_dispatch: { }
 
+# Native concurrency cancellation also works while a self-hosted job is still queued.
+concurrency:
+  group: debug-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   IDE_SIGNING_ALIAS: ${{ secrets.IDE_SIGNING_ALIAS }}
@@ -32,6 +37,10 @@ env:
 
 jobs:
   check_changes:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     name: Check for meaningful changes
     runs-on: self-hosted
     outputs:
@@ -72,6 +81,10 @@ jobs:
           fi
 
   validate_branch:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     name: Validate branch and Jira ticket
     runs-on: self-hosted
     outputs:
@@ -138,7 +151,13 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 60
     needs: [ check_changes, validate_branch ]
-    if: needs.check_changes.outputs.must_build == 'true'
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
+      && (
+        needs.check_changes.outputs.must_build == 'true'
+      )
     env:
       INCLUDE_LLAMA_ASSETS: "false"
 

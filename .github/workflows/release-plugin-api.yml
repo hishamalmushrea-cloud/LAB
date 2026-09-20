@@ -13,6 +13,10 @@ concurrency:
 jobs:
 
   release-plugin-api:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     runs-on: self-hosted
     permissions:
       contents: write

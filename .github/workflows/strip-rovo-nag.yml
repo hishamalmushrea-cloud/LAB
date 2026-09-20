@@ -26,11 +26,16 @@ jobs:
     name: Remove the Rovo Dev advertising
     # Filter comment events here so an ordinary comment never starts a runner.
     # Pull requests only, matching the sweep below, which walks only pull requests.
+    # Upstream automation is opt-in in transferred/forked repositories.
     if: >-
-      github.event_name != 'issue_comment' ||
-      (github.event.issue.pull_request &&
-       github.event.comment.user.login == 'atlassian[bot]' &&
-       contains(github.event.comment.body, 'Rovo Dev code review'))
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
+      && (
+        github.event_name != 'issue_comment' ||
+        (github.event.issue.pull_request &&
+        github.event.comment.user.login == 'atlassian[bot]' &&
+        contains(github.event.comment.body, 'Rovo Dev code review'))
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Strip the Rovo Dev block and delete the Rovo Dev comment

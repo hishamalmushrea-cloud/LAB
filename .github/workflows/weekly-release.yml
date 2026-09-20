@@ -18,6 +18,10 @@ concurrency:
 jobs:
 
   prepare:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     runs-on: self-hosted
     outputs:
       version:         ${{ steps.compute.outputs.version }}
@@ -83,6 +87,10 @@ jobs:
           echo "Jira version $VERSION → id $VERSION_ID"
 
   pull-apk:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     needs: prepare
     runs-on: self-hosted
     permissions:
@@ -195,6 +203,10 @@ jobs:
         run: rm -rf "$STAGING_DIR"
 
   release-codeonthego:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     needs: [prepare, pull-apk]
     runs-on: self-hosted
     permissions:
@@ -233,6 +245,10 @@ jobs:
           gh release create "$VERSION" "${ARGS[@]}"
 
   upload-r2:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     needs: [prepare, pull-apk]
     runs-on: self-hosted
     strategy:
@@ -281,6 +297,10 @@ jobs:
               --content-type "application/vnd.android.package-archive"
 
   finalize:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     needs: [prepare, release-codeonthego, upload-r2]
     runs-on: self-hosted
     permissions:

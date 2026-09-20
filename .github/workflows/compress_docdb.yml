@@ -12,6 +12,10 @@ on:
 
 jobs:
   download_documentation:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     name: Download and compress documentation DB
     runs-on: self-hosted
     timeout-minutes: 30

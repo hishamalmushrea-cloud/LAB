@@ -374,11 +374,16 @@ services، إنترنت، ويشغل Gradle وterminal وplugins وكود مشا
 - أسرار وأسماء hosts/organizations خاصة بالمصدر.
 - بعض workflows تنفذ merge تلقائيًا أو تنشر/توزع artifacts.
 
-لذلك نقل الملفات لا يعني أن pipeline أصبح جاهزًا في LAB. عند push قد تبدأ workflows
-مرتبطة بالـpush ثم تبقى queued أو تفشل لغياب runners/secrets. قبل اعتماد CI في هذا
-المستودع ينبغي:
+لذلك نقل الملفات لا يعني أن pipeline أصبح جاهزًا في LAB. أول push أثبت ذلك عمليًا:
+فشل job النشر إلى Cloudflare وjob بصمة مفتاح التوقيع لغياب secrets، وبقي build
+مجدولًا على runner غير موجود. أضيف بعد ذلك حارس لكل jobs المستوردة: تعمل تلقائيًا في
+`appdevforall/CodeOnTheGo` فقط، وتبقى skipped في LAB وأي fork ما لم يضبط مسؤول
+المستودع المتغير `COTG_ENABLE_UPSTREAM_WORKFLOWS=true`. التعليمات موجودة في
+`.github/workflows/README.md`.
 
-1. تعطيل أو حراسة jobs الخاصة بالمؤسسة حتى تُهيأ بيئة LAB.
+قبل تفعيل CI في هذا المستودع ينبغي:
+
+1. إبقاء الحارس معطلًا إلى أن تُهيأ بيئة LAB، وعدم تفعيل المتغير كحل شكلي.
 2. تحديد أقل `permissions:` ممكن لكل workflow.
 3. استبدال self-hosted labels أو توفير runners معزولة.
 4. تدوير/إنشاء secrets خاصة بالمستودع الهدف، وعدم نسخ أسرار المصدر.
@@ -433,7 +438,8 @@ services، إنترنت، ويشغل Gradle وterminal وplugins وكود مشا
 ### المرحلة 0 — تثبيت النسخة المنقولة
 
 - حماية فرع LAB وتحديد استراتيجية مزامنة واضحة مع `upstream/stage`.
-- تعطيل jobs الناشرة/المؤسسية في LAB حتى تهيئة secrets والرunners.
+- الإبقاء على حارس workflows المستوردة وعدم تفعيله حتى تهيئة secrets والرunners
+  وتغيير وجهات النشر الخاصة بالمصدر.
 - حفظ manifest للأصول الخارجية بإصدارات وSHA-256 ومصدر قابل للأرشفة.
 - إنشاء build check مستقل لا يحتاج أسرار نشر.
 

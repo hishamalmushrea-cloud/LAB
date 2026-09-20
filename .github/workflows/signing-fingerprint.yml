@@ -43,6 +43,10 @@ permissions:
 
 jobs:
   fingerprint:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     name: Fingerprint release signing key
     runs-on: ubuntu-latest
     timeout-minutes: 10

@@ -21,6 +21,10 @@ env:
 
 jobs:
   analyze:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     name: analysis
     runs-on: self-hosted
     timeout-minutes: 180

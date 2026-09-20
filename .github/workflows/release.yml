@@ -34,6 +34,10 @@ env:
 
 jobs:
   merge_stage_to_main:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     name: Merge stage to main
     runs-on: self-hosted
     timeout-minutes: 10
@@ -141,6 +145,10 @@ jobs:
           echo "Merge completed successfully"
 
   download_assets:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     name: Download release assets
     runs-on: self-hosted
     timeout-minutes: 10
@@ -259,6 +267,10 @@ jobs:
           rmdir ~/.ssh 2>/dev/null || true
 
   download_documentation:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     name: Download pre-compressed documentation DB
     runs-on: self-hosted
     timeout-minutes: 5
@@ -424,6 +436,10 @@ jobs:
           retention-days: 1
 
   build_apk:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     name: Build Release APK
     runs-on: self-hosted
     timeout-minutes: 60

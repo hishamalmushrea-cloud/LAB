@@ -13,10 +13,15 @@ jobs:
     # Public repo: anyone can approve, and a fork branch can be named after
     # anyone's ticket, so only our own branches qualify. Whether the approver
     # may push is settled inside the job, not here.
+    # Upstream automation is opt-in in transferred/forked repositories.
     if: >-
-      github.event.review.state == 'approved' &&
-      github.event.pull_request.draft == false &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
+      && (
+        github.event.review.state == 'approved' &&
+        github.event.pull_request.draft == false &&
+        github.event.pull_request.head.repo.full_name == github.repository
+      )
     steps:
       - name: Move the ticket to QA
         timeout-minutes: 5

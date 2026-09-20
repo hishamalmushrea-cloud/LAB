@@ -7,6 +7,10 @@ on:
 
 jobs:
   create_jira_ticket:
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
     # Use the latest stable Ubuntu runner environment.
     runs-on: ubuntu-latest
 

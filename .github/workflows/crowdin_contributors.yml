@@ -11,7 +11,13 @@ env:
 jobs:
   crowdin-contributors:
     runs-on: ubuntu-latest
-    if: github.repository == 'AndroidIDEOfficial/AndroidIDE'
+    # Upstream automation is opt-in in transferred/forked repositories.
+    if: >-
+      (github.repository == 'appdevforall/CodeOnTheGo' ||
+       vars.COTG_ENABLE_UPSTREAM_WORKFLOWS == 'true')
+      && (
+        github.repository == 'AndroidIDEOfficial/AndroidIDE'
+      )
     steps:
     - name: Checkout
       uses: actions/checkout@v4
