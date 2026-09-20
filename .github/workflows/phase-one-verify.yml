@@ -47,6 +47,9 @@ jobs:
         with:
           cache-read-only: true
 
+      - name: Set up Android command-line tools
+        uses: android-actions/setup-android@v3
+
       - name: Install Android SDK 36
         shell: bash
         run: |
