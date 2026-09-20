@@ -24,7 +24,7 @@ data class PluginManifest(
 	@SerializedName("min_ide_version")
 	val minIdeVersion: String,
 	@SerializedName("max_ide_version")
-	val maxIdeVersion: String? = null,
+	val maxIdeVersion: String = "99.0.0",
 	@SerializedName("permissions")
 	val permissions: List<String> = emptyList(),
 	@SerializedName("dependencies")
@@ -136,11 +136,12 @@ object PluginManifestParser {
 		val normalizedRevision = normalizeProvenanceValue(vcsRevision)
 		val normalizedTimestamp = normalizeProvenanceValue(buildTimestamp)
 		return if (
-			permissions == null || dependencies == null || extensions == null || buildActions == null ||
-			normalizedActions !== buildActions ||
+			maxIdeVersion == null || permissions == null || dependencies == null || extensions == null || buildActions == null ||
+				normalizedActions !== buildActions ||
 			normalizedRevision !== vcsRevision || normalizedTimestamp !== buildTimestamp
 		) {
 			copy(
+				maxIdeVersion = maxIdeVersion ?: "99.0.0",
 				permissions = permissions ?: emptyList(),
 				dependencies = dependencies ?: emptyList(),
 				extensions = extensions ?: emptyList(),

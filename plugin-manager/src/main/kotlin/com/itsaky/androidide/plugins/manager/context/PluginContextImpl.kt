@@ -7,7 +7,7 @@ import android.content.SharedPreferences
 import android.content.res.AssetManager
 import android.util.Log
 import com.itsaky.androidide.plugins.*
-import com.itsaky.androidide.plugins.manager.security.PluginSecurityManager
+import com.itsaky.androidide.plugins.manager.security.PluginIdValidator
 import java.io.File
 import java.io.InputStream
 import java.util.concurrent.ConcurrentHashMap
@@ -221,26 +221,28 @@ class ResourceManagerImpl(
     private val assetManager: AssetManager? = null
 ) : ResourceManager {
 
-    private val pluginDirectory = File(pluginsDir, pluginId)
-    private val securityManager = PluginSecurityManager()
+    private val pluginDirectory = File(pluginsDir, PluginIdValidator.requireValid(pluginId))
 
     init {
-        if (!pluginDirectory.exists()) {
-            pluginDirectory.mkdirs()
+        if (!pluginDirectory.exists() && !pluginDirectory.mkdirs()) {
+            throw IllegalStateException("Could not create plugin directory: $pluginDirectory")
         }
     }
 
     override fun getPluginDirectory(): File = pluginDirectory
 
     override fun getPluginFile(path: String): File {
-        val file = File(pluginDirectory, path)
+        require(path.isNotBlank()) { "Plugin path must not be blank" }
+        val root = pluginDirectory.canonicalFile.toPath()
+        val target = File(pluginDirectory, path).canonicalFile.toPath()
 
-        // Security check: ensure file is within plugin directory
-        if (!file.canonicalPath.startsWith(pluginDirectory.canonicalPath)) {
-            throw SecurityException("Access denied: Path traversal detected")
+        // Path.startsWith(Path) compares complete components, unlike a string prefix where
+        // `/plugins/org.example` incorrectly contains `/plugins/org.example-escape`.
+        if (!target.startsWith(root)) {
+            throw SecurityException("Access denied: path escapes the plugin directory")
         }
 
-        return file
+        return target.toFile()
     }
 
     override fun getPluginResource(name: String): ByteArray? {

@@ -35,6 +35,7 @@ internal class DeveloperOptionsScreen(
 
 	init {
 		addPreference(DebuggingPreferences())
+		addPreference(PluginDevelopmentPreferences())
 	}
 }
 
@@ -52,25 +53,45 @@ internal class DebuggingPreferences(
 }
 
 @Parcelize
+internal class PluginDevelopmentPreferences(
+	override val key: String = DevOpsPreferences.KEY_DEVOPTS_PLUGIN_DEVELOPMENT,
+	override val title: Int = R.string.idepref_group_plugin_development,
+	override val children: List<IPreference> = mutableListOf(),
+) : IPreferenceGroup() {
+
+	init {
+		addPreference(PluginDeveloperModePreference())
+	}
+}
+
+@Parcelize
+internal class PluginDeveloperModePreference(
+	override val key: String = DevOpsPreferences.KEY_DEVOPTS_PLUGIN_DEVELOPER_MODE,
+	override val title: Int = R.string.idepref_plugin_developer_mode_title,
+	override val summary: Int? = R.string.idepref_plugin_developer_mode_summary,
+) : SwitchPreference(
+	setValue = DevOpsPreferences::pluginDeveloperMode::set,
+	getValue = DevOpsPreferences::pluginDeveloperMode::get,
+)
+
+@Parcelize
 internal class DumpLogsPreference(
 	override val key: String = DevOpsPreferences.KEY_DEVOPTS_DEBUGGING_DUMPLOGS,
 	override val title: Int = R.string.idepref_devOptions_dumpLogs_title,
 	override val summary: Int? = R.string.idepref_devOptions_dumpLogs_summary,
-	override val tooltipTag: String = PREFS_DEVOPTIONS_DUMPLOGS
-) :
-	SwitchPreference(
-		setValue = DevOpsPreferences::dumpLogs::set,
-		getValue = DevOpsPreferences::dumpLogs::get
-	)
+	override val tooltipTag: String = PREFS_DEVOPTIONS_DUMPLOGS,
+) : SwitchPreference(
+	setValue = DevOpsPreferences::dumpLogs::set,
+	getValue = DevOpsPreferences::dumpLogs::get,
+)
 
 @Parcelize
 internal class EnableLogSenderPreference(
 	override val key: String = DevOpsPreferences.KEY_DEVOPTS_DEBUGGING_ENABLE_LOGSENDER,
 	override val title: Int = R.string.idepref_devOptions_enableLogsender_title,
 	override val summary: Int? = R.string.idepref_devOptions_enableLogsender_summary,
-	override val tooltipTag: String = PREFS_DEVOPTIONS_LOGSENDER
-) :
-	SwitchPreference(
-		setValue = DevOpsPreferences::logsenderEnabled::set,
-		getValue = DevOpsPreferences::logsenderEnabled::get
-	)
+	override val tooltipTag: String = PREFS_DEVOPTIONS_LOGSENDER,
+) : SwitchPreference(
+	setValue = DevOpsPreferences::logsenderEnabled::set,
+	getValue = DevOpsPreferences::logsenderEnabled::get,
+)

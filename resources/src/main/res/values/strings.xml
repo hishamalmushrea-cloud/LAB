@@ -733,6 +733,9 @@
 	<string name="title_developer_options">Developer Options</string>
 	<string name="idepref_devOptions_summary">Experimental/debugging options for Code on the Go</string>
 	<string name="idepref_group_debugging">Debugging</string>
+	<string name="idepref_group_plugin_development">Plugin development</string>
+	<string name="idepref_plugin_developer_mode_title">Plugin Developer Mode</string>
+	<string name="idepref_plugin_developer_mode_summary">Allow local plugins that are unsigned or not signed by a trusted publisher. Keep this off for normal use.</string>
 	<string name="idepref_devOptions_dumpLogs_title">Dump logs</string>
 	<string name="idepref_devOptions_dumpLogs_summary">Dump Code on the Go logs to $HOME/.cg/logs</string>
 	<string name="msg_emptyview_applogs">Run the debug variant of your application to view its logs here.</string>

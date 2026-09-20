@@ -43,7 +43,7 @@ jobs:
     if: (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && startsWith(github.ref_name, 'arena/')
     name: Phase one - configure Gradle graph
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 90
     permissions:
       contents: read
     steps:
@@ -77,6 +77,43 @@ jobs:
 
       - name: Configure the complete Gradle graph
         run: ./gradlew projects --stacktrace --no-daemon
+
+      - name: Create non-secret app test configuration
+        shell: bash
+        run: |
+          cat > app/google-services.json <<'JSON'
+          {
+            "project_info": {
+              "project_number": "0",
+              "project_id": "local-verification",
+              "storage_bucket": "local-verification.invalid"
+            },
+            "client": [{
+              "client_info": {
+                "mobilesdk_app_id": "1:0:android:0000000000000000",
+                "android_client_info": {"package_name": "com.itsaky.androidide"}
+              },
+              "api_key": [{"current_key": "not-a-secret"}]
+            }],
+            "configuration_version": "1"
+          }
+          JSON
+
+      - name: Install native toolchain required by app configuration
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" 'ndk;29.0.14206865' 'cmake;3.22.1'
+
+      - name: Test plugin hardening and compile its app integration
+        run: >-
+          ./gradlew
+          :plugin-manager:testV8DebugUnitTest
+          :app:compileV8DebugKotlin
+          --stacktrace --no-daemon
+
+      - name: Check source formatting
+        run: ./gradlew spotlessCheck --stacktrace --no-daemon
 
   check_changes:
     # Upstream automation is opt-in in transferred/forked repositories.

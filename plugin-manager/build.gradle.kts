@@ -23,6 +23,7 @@ dependencies {
 	api(projects.pluginApi)
 
 	implementation(projects.actions)
+	implementation(projects.buildInfo)
 	implementation(projects.common)
 	implementation(projects.logger)
 	implementation(projects.lookup)

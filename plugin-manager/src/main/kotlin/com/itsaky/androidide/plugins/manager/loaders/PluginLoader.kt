@@ -10,6 +10,7 @@ import android.os.Build
 import dalvik.system.DexClassLoader
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.security.MessageDigest
 import java.util.zip.ZipFile
 
 /**
@@ -257,7 +258,7 @@ class PluginLoader(
 			val pluginAuthor = metaData.getString("plugin.author") ?: ""
 			val pluginMainClass = metaData.getString("plugin.main_class") ?: return null
 			val pluginMinIdeVersion = metaData.getString("plugin.min_ide_version") ?: "1.0.0"
-			val pluginMaxIdeVersion = metaData.getString("plugin.max_ide_version")
+			val pluginMaxIdeVersion = metaData.getString("plugin.max_ide_version") ?: "99.0.0"
 
 			// Parse permissions
 			val permissions =
@@ -312,49 +313,40 @@ class PluginLoader(
 		}
 	}
 
-	/**
-	 * Validate APK signature
-	 */
-	fun validateSignature(): Boolean {
+	/** Returns the SHA-256 certificate digest for every signer in the APK signing set. */
+	fun getSignerCertificateDigests(): Set<String> =
 		try {
-			@Suppress("DEPRECATION")
-			val packageInfo =
-				context.packageManager.getPackageArchiveInfo(
-					pluginApk.absolutePath,
-					PackageManager.GET_SIGNATURES,
-				) ?: return false
-
-			// Basic signature validation - check if APK is signed
-			@Suppress("DEPRECATION")
-			val signatures = packageInfo.signatures
-			return signatures != null && signatures.isNotEmpty()
-		} catch (e: Exception) {
-			log.error("Failed to validate APK signature", e)
-			return false
-		}
-	}
-
-	fun getSignatureHash(): ByteArray? =
-		try {
-			val pm = context.packageManager
-
-			@Suppress("DEPRECATION")
-			val info =
-				pm.getPackageArchiveInfo(
-					pluginApk.absolutePath,
-					PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES,
-				)
-
-			@Suppress("DEPRECATION")
-			val legacySignatures = info?.signatures
+			val flags =
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+					PackageManager.GET_SIGNING_CERTIFICATES
+				} else {
+					@Suppress("DEPRECATION")
+					PackageManager.GET_SIGNATURES
+				}
+			val info = context.packageManager.getPackageArchiveInfo(pluginApk.absolutePath, flags)
 			val signatures =
-				info?.signingInfo?.apkContentsSigners?.takeIf { it.isNotEmpty() }
-					?: legacySignatures
-			signatures?.firstOrNull()?.toByteArray()
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+					info?.signingInfo?.apkContentsSigners.orEmpty()
+				} else {
+					@Suppress("DEPRECATION")
+					info?.signatures.orEmpty()
+				}
+			signatures
+				.map { signature ->
+					MessageDigest.getInstance("SHA-256")
+						.digest(signature.toByteArray())
+						.joinToString("") { byte -> "%02x".format(byte) }
+				}.toSet()
 		} catch (e: Exception) {
-			log.warn("Failed to extract signature hash from {}", pluginApk.absolutePath, e)
-			null
+			log.warn("Failed to extract signer certificates from {}", pluginApk.absolutePath, e)
+			emptySet()
 		}
+
+	fun validateSignature(): Boolean = getSignerCertificateDigests().isNotEmpty()
+
+	/** Kept for binary/source compatibility; new code must compare every signer digest. */
+	@Deprecated("Use getSignerCertificateDigests()")
+	fun getSignatureHash(): ByteArray? = getSignerCertificateDigests().firstOrNull()?.toByteArray()
 
 	/**
 	 * Clean up resources

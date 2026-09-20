@@ -133,7 +133,14 @@ won't fail, but the plugin will be hard to identify in the UI.
 
 To choose `plugin.min_ide_version`, see the
 [Plugin API Changelog](PLUGIN_API_CHANGELOG.md) — it maps each plugin
-capability to the `YY.WW` release that first shipped it.
+capability to the `YY.WW` release that first shipped it. The loader validates both bounds and the
+dependency graph before it creates a plugin class loader.
+
+Normal mode accepts a new package only when it is signed by the IDE publisher; an update must keep
+the exact signer set of the installed package. **Plugin Developer Mode** is a separate, off-by-default
+switch under Developer Options for local unsigned/self-signed development packages. It does not
+bypass ID, path, compatibility, permission, or dependency validation and should not be enabled for
+normal use.
 
 Example (adapted from `apk-viewer-plugin/src/main/AndroidManifest.xml`):
 
@@ -340,17 +347,7 @@ Defined by `PluginPermission` in `plugin-api/src/main/kotlin/com/itsaky/androidi
 | `network.access`         | Access network resources                                                        |
 | `system.commands`        | Execute system commands                                                         |
 | `ide.settings`           | Modify IDE settings                                                             |
-| `project.structure`      | Modify project structure                                                        |
-| `native.code`            | Execute native machine code                                                     |
-| `ide.environment.write`  | Write to IDE-managed directories (Android SDK, NDK, cache)                      |
-
-## Troubleshooting
-
-**Install fails with "Missing icon_day and icon_night for debug plugin"**
-
-Your debug build is missing one or both icons. Check:
-1. Both `<meta-data>` tags are present in `AndroidManifest.xml`.
-2. Both files exist in `src/main/assets/`.
+| `project.structure`      | Modify project structure   st in `src/main/assets/`.
 3. After building, `unzip -l my-plugin/build/plugin/my-plugin-debug.cgp | grep assets`
    shows both `assets/icon_day.png` and `assets/icon_night.png`.
 
@@ -368,6 +365,20 @@ unzip -l my-plugin/build/plugin/my-plugin.cgp | grep -E 'assets|icon'
 ```
 
 Common causes: typo in the manifest path, file accidentally placed
+under `res/raw/` or `res/drawable/`, or a leading slash on the
+manifest value (use `assets/icon_day.png`, not `/assets/icon_day.png`).
+
+**Wrong icon shows for the current theme**
+
+The selection happens in `PluginListItem.kt:69-70` via
+`isSystemInDarkMode()`. Verify your device is actually in the theme
+you expect (system Settings → Display). Also verify both files
+extracted to the device:
+
+```bash
+adb shell run-as <your.app.id> ls app_plugin_icons/<plugin-id>/
+```
+anifest path, file accidentally placed
 under `res/raw/` or `res/drawable/`, or a leading slash on the
 manifest value (use `assets/icon_day.png`, not `/assets/icon_day.png`).
 

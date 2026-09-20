@@ -11,8 +11,8 @@ correct `plugin.min_ide_version`.
 ## How to use this
 
 Set `plugin.min_ide_version` to the **highest** version below among the
-capabilities your plugin actually uses. Only `min` is enforced at install today;
-`max` is parsed but advisory.
+capabilities your plugin actually uses. Both `min` and `max` are enforced before any plugin code
+loads; malformed ranges and hosts outside the inclusive range are rejected.
 
 ```xml
 <!-- src/main/AndroidManifest.xml -->

@@ -4,10 +4,11 @@ import android.util.Log
 import com.itsaky.androidide.plugins.PluginInfo
 import com.itsaky.androidide.plugins.PluginMetadata
 import com.itsaky.androidide.plugins.manager.core.PluginManager
+import com.itsaky.androidide.plugins.manager.core.PluginValidation
+import com.itsaky.androidide.plugins.manager.install.AtomicPluginInstaller
 import com.itsaky.androidide.plugins.manager.loaders.toPluginMetadata
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.adfa.constants.PLUGIN_ARCHIVE_EXTENSION
 import java.io.File
 
 /**
@@ -106,76 +107,76 @@ class PluginRepositoryImpl(
 					pluginManager
 						?: throw IllegalStateException("Plugin system not available")
 
-				val validationResult = manager.getPluginValidation(pluginFile)
-				if (validationResult.isFailure) {
-					pluginFile.delete()
-					throw validationResult.exceptionOrNull()
-						?: Exception("Failed to read plugin metadata")
-				}
-
-				val validation = validationResult.getOrNull()!!
-				val metadata = validation.manifest
-				val pluginId = metadata.id
-
-				if (validation.isDebug) {
-					val missing =
-						listOfNotNull(
-							"icon_day".takeIf {
-								metadata.iconDay == null || !validation.iconDayEntryExists
-							},
-							"icon_night".takeIf {
-								metadata.iconNight == null || !validation.iconNightEntryExists
-							},
-						).joinToString(" and ") { "\"$it\"" }
-					if (missing.isNotEmpty()) {
-						pluginFile.delete()
-						throw IllegalArgumentException(
-							"[$pluginId] Missing $missing for debug plugin. Debug plugins must declare and ship both icon_day and icon_night assets.",
+				val initialValidation = manager.getPluginValidation(pluginFile).getOrThrow()
+				val pluginId = initialValidation.manifest.id
+				val existingFile = manager.findInstalledPluginFile(pluginId)
+				val replacingPluginId = pluginId.takeIf { existingFile != null }
+				if (replacingPluginId != null) {
+					manager.getEnabledDependent(pluginId)?.let { dependent ->
+						throw IllegalStateException(
+							"Disable dependent plugin $dependent before updating $pluginId",
 						)
 					}
 				}
+				manager.validatePluginForInstall(pluginFile, replacingPluginId).getOrThrow()
+				validateDebugIcons(initialValidation)
 
-				try {
-					manager.uninstallPlugin(pluginId)
-					Log.d(TAG, "Uninstalled existing version of plugin: $pluginId")
-				} catch (e: Exception) {
-					Log.w(TAG, "Error uninstalling existing plugin: ${e.message}")
-				}
-
-				val fileExtension =
-					if (pluginFile.name.endsWith(".$PLUGIN_ARCHIVE_EXTENSION", ignoreCase = true)) ".$PLUGIN_ARCHIVE_EXTENSION" else ".apk"
-				val finalFileName = "${pluginId}$fileExtension"
-
-				if (!pluginsDir.exists()) {
-					pluginsDir.mkdirs()
-				}
-
-				val finalFile = File(pluginsDir, finalFileName)
-
-				try {
-					pluginFile.copyTo(finalFile, overwrite = true)
-					Log.d(TAG, "Plugin file copied to: ${finalFile.absolutePath}")
-					pluginFile.delete()
-				} catch (e: Exception) {
-					Log.e(TAG, "Failed to copy plugin file to plugins directory", e)
-					throw e
-				}
-
-				manager.loadPlugins()
-
-				if (manager.getPlugin(pluginId) == null) {
-					// The new package replaced the previous one but failed to load. Remove the broken
-					// artifact so subsequent loadPlugins() calls don't keep retrying it.
-					finalFile.delete()
-					throw IllegalStateException(
-						manager.getLoadError(pluginId)
-							?: "Plugin \"$pluginId\" was installed but failed to load.",
-					)
-				}
+				val wasLoaded = manager.getPlugin(pluginId) != null
+				val wasEnabled = wasLoaded && manager.isPluginEnabled(pluginId)
+				AtomicPluginInstaller(pluginsDir).install(
+					pluginId = pluginId,
+					source = pluginFile,
+					existingFile = existingFile,
+					validateStaged = { staged ->
+						manager.validatePluginForInstall(staged, replacingPluginId).getOrThrow()
+						validateDebugIcons(manager.getPluginValidation(staged).getOrThrow())
+					},
+					unloadCurrent = {
+						if (manager.getPlugin(pluginId) != null) {
+							check(manager.unloadPlugin(pluginId)) { "Could not unload plugin $pluginId" }
+						}
+					},
+					loadReplacement = { installed ->
+						manager.loadPlugin(installed, persistActivationFailure = false).map { Unit }
+					},
+					reloadPrevious = { restored ->
+						if (!wasLoaded) {
+							Result.success(Unit)
+						} else {
+							manager.loadPlugin(restored).mapCatching {
+								if (wasEnabled && !manager.isPluginEnabled(pluginId)) {
+									check(manager.enablePlugin(pluginId)) {
+										"Could not restore enabled state for $pluginId"
+									}
+								}
+							}
+						},
+					},
+				)
 			}.onFailure { exception ->
 				Log.e(TAG, "Failed to install plugin from file: ${pluginFile.absolutePath}", exception)
 			}
 		}
+
+	private fun validateDebugIcons(validation: PluginValidation) {
+		if (!validation.isDebug) return
+		val metadata = validation.manifest
+		val missing =
+			listOfNotNull(
+				"icon_day".takeIf {
+					metadata.iconDay == null || !validation.iconDayEntryExists
+				},
+				"icon_night".takeIf {
+					metadata.iconNight == null || !validation.iconNightEntryExists
+				},
+			).joinToString(" and ") { "\"$it\"" }
+		if (missing.isNotEmpty()) {
+			throw IllegalArgumentException(
+				"[${metadata.id}] Missing $missing for debug plugin. " +
+					"Debug plugins must declare and ship both icon_day and icon_night assets.",
+			)
+		}
+	}
 
 	override suspend fun reloadPlugins(): Result<Unit> =
 		withContext(Dispatchers.IO) {

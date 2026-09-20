@@ -336,15 +336,11 @@ class PluginManagerViewModel(
 			_currentOperation.value = PluginOperation.Installing
 			_uiState.update { it.copy(isInstalling = true) }
 
-			// ownedTempFile (the ContentUri case's own temp copy) is what the `finally` block
-			// below cleans up unconditionally. Note pluginRepository.installPluginFromFile()
-			// itself unconditionally deletes whatever `pluginFile` it's given once that's copied
-			// into the plugins directory - that's pre-existing behavior this function doesn't
-			// control (it also affects InstallFileAction.kt's direct callers). What
-			// deleteSourceAfterInstall/deleteInstallSource governs below is the *original*
-			// source's lifecycle instead: a user-picked ContentUri is only ever deleted after a
-			// successful install (see the onSuccess/onFailure split below), while a forwarded
-			// LocalFile temp copy is always cleaned up regardless of outcome.
+			// ownedTempFile (the ContentUri case's private copy) is always cleaned up by this
+			// ViewModel. The repository never deletes a caller-owned source: it stages and validates
+			// its own copy, then performs an atomic replacement. deleteSourceAfterInstall therefore
+			// controls only the original document after a successful install, while a forwarded
+			// LocalFile temp copy remains disposable on every outcome.
 			var ownedTempFile: File? = null
 			var pluginFile: File? = null
 

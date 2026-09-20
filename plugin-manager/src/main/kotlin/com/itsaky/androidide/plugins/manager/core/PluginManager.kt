@@ -6,6 +6,7 @@ import android.app.Activity
 import android.content.Context
 import com.itsaky.androidide.actions.SidebarSlotExceededException
 import com.itsaky.androidide.actions.SidebarSlotManager
+import com.itsaky.androidide.buildinfo.BuildInfo
 import com.itsaky.androidide.plugins.IPlugin
 import com.itsaky.androidide.plugins.PluginContext
 import com.itsaky.androidide.plugins.PluginInfo
@@ -33,12 +34,18 @@ import com.itsaky.androidide.plugins.manager.context.ServiceRegistryImpl
 import com.itsaky.androidide.plugins.manager.context.SharedServiceRegistry
 import com.itsaky.androidide.plugins.manager.documentation.PluginDocumentationManager
 import com.itsaky.androidide.plugins.manager.fragment.PluginFragmentFactory
+import com.itsaky.androidide.plugins.manager.install.AtomicPluginInstaller
 import com.itsaky.androidide.plugins.manager.loaders.PluginLoader
 import com.itsaky.androidide.plugins.manager.loaders.PluginManifest
 import com.itsaky.androidide.plugins.manager.loaders.PluginResourceContext
 import com.itsaky.androidide.plugins.manager.loaders.toPluginMetadata
 import com.itsaky.androidide.plugins.manager.project.PluginProjectManager
+import com.itsaky.androidide.plugins.manager.security.IdeVersion
+import com.itsaky.androidide.plugins.manager.security.PluginCompatibilityValidator
+import com.itsaky.androidide.plugins.manager.security.PluginDependencyResolver
+import com.itsaky.androidide.plugins.manager.security.PluginIdValidator
 import com.itsaky.androidide.plugins.manager.security.PluginSecurityManager
+import com.itsaky.androidide.plugins.manager.security.PluginTrustPolicy
 import com.itsaky.androidide.plugins.manager.services.CogoProjectProvider
 import com.itsaky.androidide.plugins.manager.services.IdeArchiveServiceImpl
 import com.itsaky.androidide.plugins.manager.services.IdeBuildServiceImpl
@@ -74,13 +81,16 @@ import com.itsaky.androidide.plugins.services.IdeTemplateService
 import com.itsaky.androidide.plugins.services.IdeThemeService
 import com.itsaky.androidide.plugins.services.IdeTooltipService
 import com.itsaky.androidide.plugins.services.IdeUIService
+import com.itsaky.androidide.preferences.internal.DevOpsPreferences
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -297,6 +307,15 @@ class PluginManager private constructor(
 	private var projectServicePermissions: Set<PluginPermission> = setOf(PluginPermission.FILESYSTEM_READ)
 
 	companion object {
+		/** Source-tree fallback used by local/debug builds with no release stamp. */
+		private const val CURRENT_IDE_COMPATIBILITY_VERSION = "26.38.1"
+
+		private fun resolveHostIdeVersion(): String =
+			sequenceOf(BuildInfo.RELEASE_VERSION, BuildInfo.VERSION_NAME)
+				.map { it.trim() }
+				.firstOrNull { IdeVersion.parse(it) != null }
+				?: CURRENT_IDE_COMPATIBILITY_VERSION
+
 		@Volatile
 		@Suppress("ktlint:standard:property-naming")
 		private var INSTANCE: PluginManager? = null
@@ -319,8 +338,13 @@ class PluginManager private constructor(
 	private val loadedPlugins = ConcurrentHashMap<String, LoadedPlugin>()
 	private val pluginStates = ConcurrentHashMap<String, Boolean>()
 	private val loadFailures = ConcurrentHashMap<String, String>()
+	private val documentationJobs = ConcurrentHashMap<String, Job>()
 	private val pluginRegistry = PluginRegistry(context)
 	private val securityManager = PluginSecurityManager()
+	private val compatibilityValidator = PluginCompatibilityValidator(resolveHostIdeVersion())
+	private val trustedPublisherDigests by lazy {
+		PluginLoader(context, File(context.applicationInfo.sourceDir)).getSignerCertificateDigests()
+	}
 	private val serviceRegistry = SharedServiceRegistry()
 	private val lifecycleDispatcher = PluginLifecycleDispatcher()
 
@@ -371,53 +395,58 @@ class PluginManager private constructor(
 	private val projectProvider = CogoProjectProvider()
 
 	init {
-		if (!pluginsDir.exists()) {
-			pluginsDir.mkdirs()
+		if (!pluginsDir.exists() && !pluginsDir.mkdirs()) {
+			throw IllegalStateException("Could not create plugin directory: $pluginsDir")
 		}
+		AtomicPluginInstaller.recoverInterruptedTransactions(pluginsDir)
 	}
 
 	suspend fun loadPlugins() =
 		withContext(Dispatchers.IO) {
 			logger.info("Loading plugins from directory: ${pluginsDir.absolutePath}")
-
-			// Load plugin states first
 			loadPluginStates()
-
-			// After loading all plugins, verify documentation for already loaded plugins
-			verifyDocumentationForLoadedPlugins()
 
 			val pluginFiles =
 				pluginsDir.listFiles { file ->
 					file.isFile && file.name.endsWith(".$PLUGIN_ARCHIVE_EXTENSION", ignoreCase = true)
-				} ?: return@withContext
+				}?.sortedBy { it.name } ?: return@withContext
 
 			logger.info("Found ${pluginFiles.size} plugin files")
-
 			loadFailures.clear()
 
-			// Load plugins in parallel
-			val loadJobs =
-				pluginFiles.map { pluginFile ->
-					async {
-						logger.debug("Loading plugin: ${pluginFile.name}")
-						val result =
-							try {
-								loadPlugin(pluginFile)
-							} catch (e: CancellationException) {
-								throw e
-							} catch (e: Exception) {
-								Result.failure(e)
-							}
-						result.onFailure { error -> recordLoadFailure(pluginFile, error) }
-					}
+			val candidates = linkedMapOf<String, Pair<File, PluginManifest>>()
+			val duplicateIds = mutableSetOf<String>()
+			pluginFiles.forEach { pluginFile ->
+				loadAndValidate(pluginFile)
+					.mapCatching { (manifest, loader) ->
+						requireTrustedPackage(pluginFile, manifest, loader)
+						require(manifest.id !in duplicateIds) { "Duplicate plugin ID ${manifest.id}" }
+						val previous = candidates.putIfAbsent(manifest.id, pluginFile to manifest)
+						if (previous != null) {
+							candidates.remove(manifest.id)
+							duplicateIds.add(manifest.id)
+							throw IllegalArgumentException("Duplicate plugin ID ${manifest.id}")
+						}
+					}.onFailure { error -> recordLoadFailure(pluginFile, error) }
+			}
+
+			val order =
+				runCatching {
+					PluginDependencyResolver.resolve(
+						candidates.mapValues { (_, candidate) -> candidate.second.dependencies },
+					)
+				}.getOrElse { error ->
+					candidates.values.forEach { (file, _) -> recordLoadFailure(file, error) }
+					return@withContext
 				}
 
-			// Wait for all plugins to load
-			loadJobs.awaitAll()
+			order.forEach { pluginId ->
+				val (pluginFile, _) = candidates.getValue(pluginId)
+				logger.debug("Loading plugin in dependency order: ${pluginFile.name}")
+				loadPlugin(pluginFile).onFailure { error -> recordLoadFailure(pluginFile, error) }
+			}
 
 			logger.info("Successfully loaded ${loadedPlugins.size} plugins")
-
-			// Verify documentation after all plugins are loaded
 			verifyDocumentationForLoadedPlugins()
 		}
 
@@ -450,15 +479,67 @@ class PluginManager private constructor(
 			verifyDocumentationForLoadedPlugins()
 		}
 
-	private fun loadAndValidate(pluginFile: File): Result<Pair<PluginManifest, PluginLoader>> {
-		if (!pluginFile.exists()) return Result.failure(IllegalArgumentException("Plugin file does not exist: ${pluginFile.absolutePath}"))
-		if (!pluginFile.canRead()) return Result.failure(IllegalArgumentException("Cannot read plugin file: ${pluginFile.absolutePath}"))
-		val loader = PluginLoader(context, pluginFile)
-		val manifest =
-			loader.getPluginMetadata()
-				?: return Result.failure(IllegalArgumentException("Plugin manifest not found in: ${pluginFile.name}"))
-		return Result.success(manifest to loader)
+	private fun loadAndValidate(pluginFile: File): Result<Pair<PluginManifest, PluginLoader>> =
+		runCatching {
+			require(pluginFile.exists()) { "Plugin file does not exist: ${pluginFile.absolutePath}" }
+			require(pluginFile.canRead()) { "Cannot read plugin file: ${pluginFile.absolutePath}" }
+			require(pluginFile.name.endsWith(".$PLUGIN_ARCHIVE_EXTENSION", ignoreCase = true)) {
+				"Only CGP plugins are supported: ${pluginFile.name}"
+			}
+			val loader = PluginLoader(context, pluginFile)
+			val manifest =
+				requireNotNull(loader.getPluginMetadata()) {
+					"Plugin manifest not found in: ${pluginFile.name}"
+				}
+			PluginIdValidator.requireValid(manifest.id)
+			require(securityManager.validatePlugin(pluginFile, manifest)) {
+				"Plugin failed security validation: ${manifest.id}"
+			}
+			compatibilityValidator.requireCompatible(manifest)
+			manifest.dependencies.forEach(PluginIdValidator::requireValid)
+			manifest to loader
+		}
+
+	private fun isInstalledPackage(pluginFile: File): Boolean =
+		runCatching { pluginFile.canonicalFile.parentFile == pluginsDir.canonicalFile }.getOrDefault(false)
+
+	private fun requireTrustedPackage(
+		pluginFile: File,
+		manifest: PluginManifest,
+		loader: PluginLoader,
+		replacingPluginId: String? = null,
+	) {
+		val existingSigners =
+			replacingPluginId
+				?.let(::findInstalledPluginFile)
+				?.takeUnless { it.canonicalFile == pluginFile.canonicalFile }
+				?.let { PluginLoader(context, it).getSignerCertificateDigests() }
+				.orEmpty()
+		PluginTrustPolicy.requireTrusted(
+			pluginId = manifest.id,
+			signerDigests = loader.getSignerCertificateDigests(),
+			trustedPublisherDigests = trustedPublisherDigests,
+			existingPluginDigests = existingSigners,
+			isAlreadyInstalled = isInstalledPackage(pluginFile),
+			developerMode = DevOpsPreferences.pluginDeveloperMode,
+		)
 	}
+
+	/** Validates an incoming archive completely without executing plugin code. */
+	fun validatePluginForInstall(
+		pluginFile: File,
+		replacingPluginId: String? = null,
+	): Result<PluginManifest> =
+		loadAndValidate(pluginFile).mapCatching { (manifest, loader) ->
+			if (replacingPluginId != null) {
+				PluginIdValidator.requireValid(replacingPluginId)
+				require(manifest.id == replacingPluginId) {
+					"Incoming plugin ID ${manifest.id} does not match $replacingPluginId"
+				}
+			}
+			requireTrustedPackage(pluginFile, manifest, loader, replacingPluginId)
+			manifest
+		}
 
 	fun getPluginMetadataOnly(pluginFile: File): Result<PluginManifest> = loadAndValidate(pluginFile).map { it.first }
 
@@ -519,36 +600,32 @@ class PluginManager private constructor(
 	/**
 	 * Load plugin with full resource support
 	 */
-	fun loadPlugin(file: File): Result<IPlugin> {
+	fun loadPlugin(
+		file: File,
+		persistActivationFailure: Boolean = true,
+	): Result<IPlugin> {
 		var reservedSlotsPluginId: String? = null
+		var loadedPluginId: String? = null
 		return try {
 			logger.debug("Loading plugin from: ${file.absolutePath}")
 
-			// Validate prerequisites
-			if (!file.exists() || !file.canRead()) {
-				return Result.failure(IllegalArgumentException("Plugin  does not exist or is not readable: ${file.absolutePath}"))
+			val (manifest, pluginLoader) =
+				loadAndValidate(file).getOrElse { return Result.failure(it) }
+			requireTrustedPackage(file, manifest, pluginLoader)
+			if (manifest.id in loadedPlugins) {
+				return Result.failure(IllegalStateException("Plugin ${manifest.id} is already loaded"))
 			}
-
-			// Create plugin loader
-			val pluginLoader = PluginLoader(context, file)
-
-			// Validate signature
-			if (!pluginLoader.validateSignature()) {
-				logger.warn("signature validation failed for: ${file.name}")
-				// Continue anyway for development
+			manifest.dependencies.forEach { dependencyId ->
+				val dependency = loadedPlugins[dependencyId]
+				if (dependency == null || !dependency.isEnabled) {
+					return Result.failure(
+						IllegalStateException(
+							"Plugin ${manifest.id} requires enabled dependency $dependencyId",
+						),
+					)
+				}
 			}
-
-			// Get plugin manifest from
-			val manifest = pluginLoader.getPluginMetadata()
-			if (manifest == null) {
-				return Result.failure(IllegalArgumentException("Plugin manifest not found in: ${file.name}"))
-			}
-
-			logger.debug("Parsed manifest for plugin: ${manifest.name} (${manifest.id})")
-
-			if (!securityManager.validatePlugin(file, manifest)) {
-				return Result.failure(SecurityException("plugin failed security validation: ${manifest.id}"))
-			}
+			logger.debug("Validated manifest for plugin: ${manifest.name} (${manifest.id})")
 
 			// Validate sidebar slots BEFORE loading plugin code
 			if (manifest.sidebarItems > 0) {
@@ -677,15 +754,19 @@ class PluginManager private constructor(
 					iconNightPath = iconNightPath,
 				)
 			loadedPlugins[manifest.id] = loadedPlugin
+			loadedPluginId = manifest.id
 
 			if (!isEnabled) {
 				logger.info("Successfully loaded  plugin (disabled): ${manifest.name} (${manifest.id})")
 				return Result.success(plugin)
 			}
 
-			activateLoadedPlugin(loadedPlugin)
+			activateLoadedPlugin(loadedPlugin, persistActivationFailure).getOrThrow()
 			Result.success(plugin)
-		} catch (e: Exception) {
+		} catch (e: Throwable) {
+			loadedPluginId?.let { pluginId ->
+				if (pluginId in loadedPlugins) unloadPlugin(pluginId)
+			}
 			reservedSlotsPluginId?.let { pluginId ->
 				SidebarSlotManager.releasePluginSlots(pluginId)
 			}
@@ -695,10 +776,13 @@ class PluginManager private constructor(
 		}
 	}
 
-	private fun activateLoadedPlugin(loadedPlugin: LoadedPlugin) {
+	private fun activateLoadedPlugin(
+		loadedPlugin: LoadedPlugin,
+		persistFailure: Boolean = true,
+	): Result<Unit> {
 		val plugin = loadedPlugin.plugin
 		val manifest = loadedPlugin.manifest
-		runCatching {
+		return runCatching {
 			if (plugin is SnippetExtension) {
 				PluginSnippetManager.getInstance().registerPlugin(manifest.id, plugin)
 			}
@@ -720,7 +804,7 @@ class PluginManager private constructor(
 		}.onFailure { e ->
 			logger.error("Failed to activate  plugin: ${manifest.id}", e)
 			loadedPlugin.isEnabled = false
-			savePluginState(manifest.id, false)
+			if (persistFailure) savePluginState(manifest.id, false)
 		}
 	}
 
@@ -729,14 +813,18 @@ class PluginManager private constructor(
 		plugin: DocumentationExtension,
 		apkPath: String,
 	) {
-		CoroutineScope(Dispatchers.IO).launch {
-			runDocStep("documentation", pluginId) {
-				documentationManager.verifyAndRecreateDocumentation(pluginId, plugin)
+		val job =
+			CoroutineScope(SupervisorJob() + Dispatchers.IO).launch(start = CoroutineStart.LAZY) {
+				runDocStep("documentation", pluginId) {
+					documentationManager.verifyAndRecreateDocumentation(pluginId, plugin)
+				}
+				runDocStep("Tier 3 docs", pluginId) {
+					documentationManager.verifyAndRecreateTier3Documentation(pluginId, plugin, apkPath)
+				}
 			}
-			runDocStep("Tier 3 docs", pluginId) {
-				documentationManager.verifyAndRecreateTier3Documentation(pluginId, plugin, apkPath)
-			}
-		}
+		documentationJobs.put(pluginId, job)?.cancel()
+		job.invokeOnCompletion { documentationJobs.remove(pluginId, job) }
+		job.start()
 	}
 
 	private suspend fun runDocStep(
@@ -744,45 +832,33 @@ class PluginManager private constructor(
 		pluginId: String,
 		block: suspend () -> Boolean,
 	) {
-		runCatching { block() }
-			.onSuccess { result ->
-				if (result) {
-					logger.info("$label verified/installed for plugin: $pluginId")
-				} else {
-					logger.warn("Failed to verify/install $label for plugin: $pluginId")
-				}
-			}.onFailure { e ->
-				logger.error("Error verifying/installing $label for plugin: $pluginId", e)
+		try {
+			if (block()) {
+				logger.info("$label verified/installed for plugin: $pluginId")
+			} else {
+				logger.warn("Failed to verify/install $label for plugin: $pluginId")
 			}
+		} catch (cancellation: CancellationException) {
+			throw cancellation
+		} catch (error: Exception) {
+			logger.error("Error verifying/installing $label for plugin: $pluginId", error)
+		}
 	}
 
 	fun unloadPlugin(pluginId: String): Boolean {
+		PluginIdValidator.requireValid(pluginId)
 		val loadedPlugin = loadedPlugins.remove(pluginId) ?: return false
 
 		try {
-			// Remove documentation if plugin implements DocumentationExtension
-			if (loadedPlugin.plugin is DocumentationExtension) {
-				CoroutineScope(Dispatchers.IO).launch {
-					try {
-						val docResult = documentationManager.removePluginDocumentation(pluginId, loadedPlugin.plugin)
-						if (docResult) {
-							logger.info("Removed documentation for plugin: $pluginId")
-						} else {
-							logger.warn("Failed to remove documentation for plugin: $pluginId")
-						}
-					} catch (e: Exception) {
-						logger.error("Error removing documentation for plugin: $pluginId", e)
+			// Complete documentation teardown before a replacement can install its entries.
+			runBlocking(Dispatchers.IO) {
+				documentationJobs.remove(pluginId)?.cancelAndJoin()
+				if (loadedPlugin.plugin is DocumentationExtension) {
+					runDocStep("documentation removal", pluginId) {
+						documentationManager.removePluginDocumentation(pluginId, loadedPlugin.plugin)
 					}
-
-					try {
-						val tier3Result = documentationManager.removePluginTier3Documentation(pluginId)
-						if (tier3Result) {
-							logger.info("Removed Tier 3 docs for plugin: $pluginId")
-						} else {
-							logger.warn("Failed to remove Tier 3 docs for plugin: $pluginId")
-						}
-					} catch (e: Exception) {
-						logger.error("Error removing Tier 3 docs for plugin: $pluginId", e)
+					runDocStep("Tier 3 documentation removal", pluginId) {
+						documentationManager.removePluginTier3Documentation(pluginId)
 					}
 				}
 			}
@@ -839,21 +915,54 @@ class PluginManager private constructor(
 		}
 	}
 
+	fun getEnabledDependent(pluginId: String): String? {
+		PluginIdValidator.requireValid(pluginId)
+		return loadedPlugins.values
+			.firstOrNull { it.isEnabled && pluginId in it.manifest.dependencies }
+			?.manifest
+			?.id
+	}
+
+	fun findInstalledPluginFile(pluginId: String): File? {
+		PluginIdValidator.requireValid(pluginId)
+		val matches =
+			pluginsDir
+				.listFiles { file ->
+					file.isFile && file.name.endsWith(".$PLUGIN_ARCHIVE_EXTENSION", ignoreCase = true)
+				}.orEmpty()
+				.filter { file -> PluginLoader(context, file).getPluginMetadata()?.id == pluginId }
+		require(matches.size <= 1) { "Multiple installed packages claim plugin ID $pluginId" }
+		return matches.singleOrNull()
+	}
+
 	fun haveMatchingSignatures(
 		incomingFile: File,
 		existingPluginId: String,
 	): Boolean {
-		val existingFile = File(pluginsDir, "$existingPluginId.$PLUGIN_ARCHIVE_EXTENSION")
-		val incomingSig = PluginLoader(context, incomingFile).getSignatureHash()
-		val existingSig = PluginLoader(context, existingFile).getSignatureHash()
-		if (incomingSig == null || existingSig == null) {
+		if (DevOpsPreferences.pluginDeveloperMode) return true
+		val existingFile = findInstalledPluginFile(existingPluginId) ?: return false
+		val incomingSigners = PluginLoader(context, incomingFile).getSignerCertificateDigests()
+		val existingSigners = PluginLoader(context, existingFile).getSignerCertificateDigests()
+		if (incomingSigners.isEmpty() || existingSigners.isEmpty()) {
 			logger.warn("Could not extract signatures for $existingPluginId; treating as mismatch")
 			return false
 		}
-		return incomingSig.contentEquals(existingSig)
+		return incomingSigners == existingSigners
 	}
 
 	fun uninstallPlugin(pluginId: String): Boolean {
+		PluginIdValidator.requireValid(pluginId)
+		val dependent =
+			pluginsDir
+				.listFiles { file ->
+					file.isFile && file.name.endsWith(".$PLUGIN_ARCHIVE_EXTENSION", ignoreCase = true)
+				}.orEmpty()
+				.mapNotNull { PluginLoader(context, it).getPluginMetadata() }
+				.firstOrNull { it.id != pluginId && pluginId in it.dependencies }
+		if (dependent != null) {
+			logger.error("Cannot uninstall $pluginId; plugin ${dependent.id} depends on it")
+			return false
+		}
 		logger.info("=== Starting uninstall for plugin: $pluginId ===")
 
 		// Release sidebar slots reserved by this plugin
@@ -882,7 +991,8 @@ class PluginManager private constructor(
 		}
 
 		logger.info("Found ${pluginFiles.size} plugin files to check")
-		var deleted = false
+		var matchingFiles = 0
+		var deleted = true
 		for (pluginFile in pluginFiles) {
 			try {
 				// Check if this  contains the plugin we want to delete
@@ -891,10 +1001,9 @@ class PluginManager private constructor(
 
 				if (manifest != null) {
 					if (manifest.id == pluginId) {
-						if (pluginFile.delete()) {
-							deleted = true
-							break // Found and deleted the right file
-						} else {
+						matchingFiles++
+						if (!pluginFile.delete()) {
+							deleted = false
 							logger.error("File exists: ${pluginFile.exists()}, Can write: ${pluginFile.canWrite()}")
 						}
 					}
@@ -905,6 +1014,7 @@ class PluginManager private constructor(
 				logger.error("Error checking plugin file ${pluginFile.name}: ${e.message}", e)
 			}
 		}
+		deleted = deleted && matchingFiles > 0
 
 		// Remove plugin state and cleanup contributions
 		if (deleted) {
@@ -921,6 +1031,11 @@ class PluginManager private constructor(
 	}
 
 	fun getPlugin(pluginId: String): IPlugin? = loadedPlugins[pluginId]?.plugin
+
+	fun isPluginEnabled(pluginId: String): Boolean {
+		PluginIdValidator.requireValid(pluginId)
+		return loadedPlugins[pluginId]?.isEnabled ?: pluginStates[pluginId] ?: true
+	}
 
 	fun getLoadError(pluginId: String): String? = loadFailures[pluginId]
 
@@ -1052,7 +1167,16 @@ class PluginManager private constructor(
 	fun getClassLoaderForPluginId(pluginId: String): ClassLoader? = loadedPlugins[pluginId]?.classLoader
 
 	fun enablePlugin(pluginId: String): Boolean {
+		PluginIdValidator.requireValid(pluginId)
 		val loadedPlugin = loadedPlugins[pluginId] ?: return false
+		val unavailableDependency =
+			loadedPlugin.manifest.dependencies.firstOrNull { dependencyId ->
+				loadedPlugins[dependencyId]?.isEnabled != true
+			}
+		if (unavailableDependency != null) {
+			logger.error("Cannot enable $pluginId; dependency $unavailableDependency is not enabled")
+			return false
+		}
 
 		if (loadedPlugin.isEnabled) {
 			logger.info("Plugin $pluginId is already enabled")
@@ -1073,7 +1197,16 @@ class PluginManager private constructor(
 	}
 
 	fun disablePlugin(pluginId: String): Boolean {
+		PluginIdValidator.requireValid(pluginId)
 		val loadedPlugin = loadedPlugins[pluginId] ?: return false
+		val enabledDependent =
+			loadedPlugins.values.firstOrNull { candidate ->
+				candidate.isEnabled && pluginId in candidate.manifest.dependencies
+			}
+		if (enabledDependent != null) {
+			logger.error("Cannot disable $pluginId; enabled plugin ${enabledDependent.manifest.id} depends on it")
+			return false
+		}
 
 		if (!loadedPlugin.isEnabled) {
 			logger.info("Plugin $pluginId is already disabled")
@@ -1797,32 +1930,6 @@ class PluginManager private constructor(
 				if (dir.exists()) dir.deleteRecursively()
 			}
 
-			// Clean up ART cache files in oat directory
-			try {
-				val oatDir = File(pluginsDir, "oat")
-				if (oatDir.exists() && oatDir.isDirectory) {
-					oatDir.walkTopDown().forEach { file ->
-						if (file.name.contains(pluginId)) {
-							val deleted = file.deleteRecursively()
-							logger.debug("Deleted ART cache: ${file.absolutePath} (success: $deleted)")
-						}
-					}
-				}
-			} catch (e: Exception) {
-				logger.warn("Failed to cleanup ART cache files for: $pluginId", e)
-			}
-
-			// Clean up any other directories or files that contain the plugin ID
-			try {
-				pluginsDir.walkTopDown().forEach { file ->
-					if (file != pluginsDir && file.name.contains(pluginId)) {
-						val deleted = file.deleteRecursively()
-						logger.debug("Deleted plugin-related item: ${file.absolutePath} (success: $deleted)")
-					}
-				}
-			} catch (e: Exception) {
-				logger.warn("Failed to cleanup plugin-related files for: $pluginId", e)
-			}
 
 			logger.debug("Complete plugin cleanup finished for: $pluginId")
 		}

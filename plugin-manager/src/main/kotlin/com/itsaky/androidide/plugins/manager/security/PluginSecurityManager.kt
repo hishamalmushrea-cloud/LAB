@@ -82,11 +82,12 @@ class PluginSecurityManager {
     }
     
     private fun validateManifest(manifest: PluginManifest): Boolean {
-        return manifest.id.isNotBlank() &&
+        return PluginIdValidator.isValid(manifest.id) &&
                 manifest.name.isNotBlank() &&
                 manifest.version.isNotBlank() &&
                 manifest.mainClass.isNotBlank() &&
-                manifest.minIdeVersion.isNotBlank()
+                manifest.minIdeVersion.isNotBlank() &&
+                manifest.maxIdeVersion.isNotBlank()
     }
     
     private fun validatePermissions(permissions: List<String>): Boolean {
