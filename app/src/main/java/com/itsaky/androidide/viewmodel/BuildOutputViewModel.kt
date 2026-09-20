@@ -45,7 +45,7 @@ import kotlin.math.max
  *
  * [appendAsync] is the write path and is safe to call from any thread; it does not depend on the
  * Build Output tab existing. That matters because the tab lives in a pager that destroys its
- * fragment whenever another tab is shown -- the AI agent's chat tab included -- and while the
+ * fragment whenever another tab is shown -- including plugin-provided tabs -- and while the
  * fragment was the only caller of [append], a build started from the chat wrote no log at all and
  * the agent's `read_build_output` had nothing to read.
  */

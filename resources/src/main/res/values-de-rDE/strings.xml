@@ -167,7 +167,6 @@
   <string name="msg_clear_cache">Dies löscht das Cache-Verzeichnis, das von Gradle erstellt wurde. Wenn Sie es löschen, kann der nächste Build etwas länger dauern, als gewöhnlich, da Gradle die benötigten Dateien erneut herunterlädt.\n\nSind Sie sicher, dass Sie die Caches löschen möchten?</string>
   <!-- Error Messages used while Logging -->
   <!-- Layout preview and designer -->
-  <string name="title_preview_layout">Layout Vorschau</string>
   <string name="title_viewaction_delete">L&#xF6;schen</string>
   <string name="msg_yesno_def_title">Bitte best&#xE4;tigen</string>
   <string name="msg_yesno_def_message">Bist du dir sicher?</string>
@@ -382,7 +381,6 @@
   <string name="title_app_version">App-Version</string>
   <string name="title_country">Land</string>
   <string name="title_cpu_arch">Prozessor-Architektur</string>
-  <string name="title_preview_data">Datenvorschau</string>
   <string name="title_android_version">Android Version</string>
   <string name="btn_opt_in">Einwilligen</string>
   <string name="title_developer_options">Entwickleroptionen</string>

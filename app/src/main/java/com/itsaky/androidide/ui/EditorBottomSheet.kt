@@ -507,7 +507,7 @@ class EditorBottomSheet
 		 *
 		 * The view model is written first and unconditionally: the pager destroys
 		 * [com.itsaky.androidide.fragments.output.BuildOutputFragment] whenever another tab is
-		 * shown, so while the fragment was the only writer, a build started from the AI agent's tab
+		 * shown, so while the fragment was the only writer, a build started from a plugin-provided tab
 		 * -- the one place the user necessarily is when the agent builds -- left no log behind.
 		 */
 		fun appendBuildOut(str: String?) {

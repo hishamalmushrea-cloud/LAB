@@ -167,7 +167,6 @@
   <string name="msg_clear_cache">यह ग्रेडल द्वारा बनाई गई कैश डायरेक्टरी को हटा देगा। यदि आप इसे हटाते हैं, तो अगली बिल्ड में सामान्य से थोड़ा अधिक समय लग सकता है क्योंकि ग्रेडल आवश्यक फ़ाइलों को फिर से डाउनलोड करेगा।\n\nक्या आप सुनिश्चित हैं कि आप कैश हटाना चाहते हैं?</string>
   <!-- Error Messages used while Logging -->
   <!-- Layout preview and designer -->
-  <string name="title_preview_layout">प्रिव्यू लेआउट</string>
   <string name="title_viewaction_delete">डिलीट</string>
   <string name="msg_yesno_def_title">कृपया कन्फर्म करें</string>
   <string name="msg_yesno_def_message">कया आप श्योर हो?</string>
@@ -382,7 +381,6 @@
   <string name="title_app_version">एप्लिकेशन वर्शन</string>
   <string name="title_country">देश</string>
   <string name="title_cpu_arch">सीपीयू आर्किटेक्चर</string>
-  <string name="title_preview_data">डेटा का पूर्वावलोकन</string>
   <string name="title_android_version">Android वर्शन</string>
   <string name="btn_opt_in">चयन करें</string>
   <string name="title_developer_options">डेवलपर विकल्प</string>

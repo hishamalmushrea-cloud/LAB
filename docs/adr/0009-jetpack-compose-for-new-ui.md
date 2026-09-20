@@ -24,7 +24,7 @@ That split has a cost: two ways to build a screen, manual view-state wiring, boi
 
 **Positive**
 - One way to build new screens; less boilerplate (no binding/`findViewById`), state-driven rendering that maps cleanly onto the existing `StateFlow` UDF.
-- UI logic is easier to test and preview (`compose-preview` already exists in the tree).
+- UI logic is easier to test with Compose UI tests and ordinary `@Preview` functions. The separately distributed user-code Compose Preview plugin is unrelated to previews of CoGo's own UI.
 
 **Negative / costs**
 - A **mixed codebase** for the foreseeable future — Compose and Views coexist; contributors must know both, and interop (`ComposeView` / `AndroidView`) is needed at the seams.

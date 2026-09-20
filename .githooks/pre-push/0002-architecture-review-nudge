@@ -33,7 +33,7 @@ changed=$(git diff --name-only "$range" 2>/dev/null) || exit 0
 firstparty=$(printf '%s\n' "$changed" \
 	| grep -E '\.(kt|java)$' \
 	| grep -vE '(^|/)(build|src/test|src/androidTest)/' \
-	| grep -vE '^(composite-builds/build-deps|termux/|eventbus/|LayoutEditor/|subprojects/(aaptcompiler|builder-model-impl|flashbar|xml-dom|llama\.cpp)/)' \
+	| grep -vE '^(composite-builds/build-deps|termux/|eventbus/|subprojects/(aaptcompiler|builder-model-impl|flashbar|xml-dom)/)' \
 	|| true)
 
 [ -n "$firstparty" ] || exit 0

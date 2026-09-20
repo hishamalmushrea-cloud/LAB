@@ -6,16 +6,16 @@
 
 Code On The Go (CoGo) is a full Android IDE that runs **on the device** — it edits, builds, and deploys real Android apps offline, embedding a Termux toolchain and running an actual Gradle build in a separate process via the `tooling-api`. It is the maintained successor to AndroidIDE, so the codebase namespace is still `com.itsaky.androidide`.
 
-There is **no single architectural philosophy** across the whole app. This large, layered application is still **predominantly View-based**: newer feature surfaces (plugin manager, AI agent, git, project list) follow a deliberate **Unidirectional Data Flow (UDF)** with Koin DI, `ViewModel` + `StateFlow`, sealed UI-state/effect types, and repositories, while older surfaces still use `LiveData` and talk to GreenRobot EventBus directly. New work follows the UDF pattern documented below, and new UI is built in **Jetpack Compose** ([ADR 0009](docs/adr/0009-jetpack-compose-for-new-ui.md)) — Compose replaces the view layer only; the UDF stack (ViewModel + `StateFlow`, Koin, repositories) is unchanged. Existing XML/View screens remain until substantially reworked. The first production example is the **Manager** screen (`PluginManagerActivity`) — merged Plugins/Templates tabs built with `Scaffold`/`TabRow`/`HorizontalPager` (ADFA-4928).
+There is **no single architectural philosophy** across the whole app. This large, layered application is still **predominantly View-based**: newer feature surfaces (plugin manager, git, project list) follow a deliberate **Unidirectional Data Flow (UDF)** with Koin DI, `ViewModel` + `StateFlow`, sealed UI-state/effect types, and repositories, while older surfaces still use `LiveData` and talk to GreenRobot EventBus directly. New work follows the UDF pattern documented below, and new UI is built in **Jetpack Compose** ([ADR 0009](docs/adr/0009-jetpack-compose-for-new-ui.md)) — Compose replaces the view layer only; the UDF stack (ViewModel + `StateFlow`, Koin, repositories) is unchanged. Existing XML/View screens remain until substantially reworked. The first production example is the **Manager** screen (`PluginManagerActivity`) — merged Plugins/Templates tabs built with `Scaffold`/`TabRow`/`HorizontalPager` (ADFA-4928).
 
 ## Core Architecture & Data Flow
 
 Feature code layers as **UI → ViewModel → Repository → data source**, with state flowing up and events/intents flowing down. Koin provides dependencies (`coreModule`, `pluginModule`, `templateModule`), constructor-injected into ViewModels.
 
-- **Data sources** — Room (`RecentProjectRoomDatabase` + DAO, `suspend` functions), raw SQLite (`SQLiteOpenHelper`, e.g. `common/.../documentation/DocumentationContentSource`), the filesystem/preferences, the embedded `tooling-api` (on-device Gradle), and external clients (Gemini via the Google GenAI SDK, on-device llama.cpp, JGit). Most are exposed through `suspend` functions.
-- **Repositories** — e.g. `agent/repository/GeminiRepository`, `repositories/PluginRepository`, `repositories/TemplateRepository`, `repositories/BreakpointRepository`. They wrap data sources and hide threading/IO from the ViewModel.
+- **Data sources** — Room (`RecentProjectRoomDatabase` + DAO, `suspend` functions), raw SQLite (`SQLiteOpenHelper`, e.g. `common/.../documentation/DocumentationContentSource`), the filesystem/preferences, the embedded `tooling-api` (on-device Gradle), and the JGit client. Plugin-owned integrations remain outside the core build graph. Most are exposed through `suspend` functions.
+- **Repositories** — e.g. `repositories/PluginRepository`, `repositories/TemplateRepository`, `repositories/BreakpointRepository`, and `repositories/RecentProjectRepository`. They wrap data sources and hide threading/IO from the ViewModel.
 - **ViewModels** — run work in `viewModelScope` on `Dispatchers.IO`, hold a private `MutableStateFlow`/`MutableSharedFlow`, and expose read-only `StateFlow`/`SharedFlow`. One-shot effects (toasts, navigation, dialogs) go through a separate `SharedFlow` of a sealed `*UiEffect` type.
-- **UI (Fragments / Activities / Views)** — collect state in a lifecycle-aware coroutine and render it; user actions return to the ViewModel as method calls or sealed `*UiEvent` intents. The existing UI is **Android Views + Fragments + RecyclerView adapters**; new UI is Jetpack Compose ([ADR 0009](docs/adr/0009-jetpack-compose-for-new-ui.md)) — first used in the Manager screen (`ui/compose/ManagerScreen.kt`, ADFA-4928). (`compose-preview` previews the *user's* Compose code, not CoGo's own.)
+- **UI (Fragments / Activities / Views)** — collect state in a lifecycle-aware coroutine and render it; user actions return to the ViewModel as method calls or sealed `*UiEvent` intents. The existing UI is **Android Views + Fragments + RecyclerView adapters**; new UI is Jetpack Compose ([ADR 0009](docs/adr/0009-jetpack-compose-for-new-ui.md)) — first used in the Manager screen (`ui/compose/ManagerScreen.kt`, ADFA-4928). User-code Compose Preview is provided by a separately distributed plugin, not a core module.
 
 ```
                 ┌─────────────────────────────────────────────┐
@@ -34,15 +34,15 @@ Feature code layers as **UI → ViewModel → Repository → data source**, with
                                 │ suspend calls
                 ┌───────────────▼─────────────────────────────┐
                 │               REPOSITORY LAYER               │
-                │  GeminiRepository / PluginRepository / ...   │
+                │  PluginRepository / TemplateRepository / ... │
                 └───────────────┬─────────────────────────────┘
                                 │
         ┌───────────────────────┼────────────────────────────────────┐
         ▼                       ▼                                      ▼
   ┌───────────┐         ┌───────────────┐                    ┌──────────────────┐
   │  Room /   │         │ tooling-api   │                    │ External clients │
-  │  SQLite / │         │ (on-device    │                    │ Gemini · llama   │
-  │  FS / prefs│        │  Gradle build)│                    │ · JGit           │
+  │  SQLite / │         │ (on-device    │                    │ JGit and plugin  │
+  │  FS / prefs│        │  Gradle build)│                    │ services         │
   └───────────┘         └───────────────┘                    └──────────────────┘
 
   Cross-cutting: GreenRobot EventBus carries decoupled, app-wide events
@@ -65,17 +65,16 @@ Whether the open project *can* be named at all is `isDeepLinkTargetOfOpenProject
 
 ## Module Structure
 
-Strategy: **layer-and-subsystem based**, not feature-by-feature. The Gradle build has ~80 modules (`settings.gradle.kts`) plus three included composite builds. `app` is the integration point; the rest are libraries it composes.
+Strategy: **layer-and-subsystem based**, not feature-by-feature. The Gradle build has ~80 modules (`settings.gradle.kts`) plus three included composite builds. `app` is the integration point; the rest are libraries it composes. AI, the full Layout Editor, and user-code Compose Preview are maintained as external plugins rather than core modules.
 
 | Group | Modules | Responsibility |
 |---|---|---|
-| Application | `app` | The IDE itself — activities, fragments, services, DI, agent, web server. Wires everything together. |
+| Application | `app` | The IDE itself — activities, fragments, services, DI, and the local documentation server. Wires everything together. |
 | Build engine | `subprojects:tooling-api*`, `gradle-plugin*`, `subprojects:projects`, `subprojects:builder-model-impl` | Runs a real Gradle build of the user's project out-of-process and streams events back. |
 | Language tooling | `lsp:{api,java,kotlin,xml,indexing,refactor-core,ui,…}`, `lexers`, `editor*`, `editor-treesitter` | Language servers, indexing, the Sora-based editor and highlighting, and the tree-sitter document outline (`editor/.../language/outline`, rendered by `app`'s sidebar `OutlineFragment`). `lsp:refactor-core` holds the language-agnostic half of the refactorings (offset spans, block geometry, rewrite composition, name primitives) so `lsp:java` and `lsp:kotlin` share one copy; `lsp:ui` holds the Compose sheets they share. Neither depends on a language server. |
-| UI design tooling | `layouteditor`, `uidesigner`, `xml-inflater`, `vectormaster`, `compose-preview` | Visual/XML design surfaces for the *user's* app. |
+| UI design infrastructure | `uidesigner`, `xml-inflater` | Retained XML inflation/design primitives used by core features. The full Layout Editor and user-code Compose Preview are external plugins. |
 | Shell | `termux:{termux-app,termux-shared,termux-view,termux-emulator}` | Embedded Termux shell and terminal. |
 | Plugin system | `plugin-api`, `plugin-api:plugin-builder`, `plugin-manager` | In-app plugin SDK + manager — `AndroidManifest.xml` `<meta-data>` contract, permissions, extensions. See [plugin-api.md](docs/plugin-api.md) for the API surface & compatibility policy. |
-| On-device AI | `llama-api`, `llama-impl` | llama.cpp integration, shipped as a per-flavor native AAR. |
 | Cross-cutting | `eventbus`, `eventbus-android`, `eventbus-events`, `common`, `common-ui`, `common-compose`, `logger`, `resources`, `preferences`, `shared` | Shared infra and the event bus. `common-compose` holds the Compose theming any module can opt into (see [ADR 0009](docs/adr/0009-jetpack-compose-for-new-ui.md)); it is a leaf so modules that aren't Compose pay nothing. |
 | Testing | `testing:{android,unit,lsp,tooling,common}` | Shared test harnesses, split by what's under test. |
 
@@ -93,9 +92,9 @@ These structural facts shape every module. Day-to-day build *commands* live in `
 - **Centralized convention logic.** All Android module setup flows through `composite-builds/build-logic` (`conf/AndroidModuleConf.kt`). Modules stay thin and share configuration, so understanding any module's setup starts here.
 - **ABI product flavors.** Every Android module *except* `:plugin-api` gets two flavors on the `abi` dimension — `v7` (`armeabi-v7a`) and `v8` (`arm64-v8a`) — defined centrally. There is no flavorless variant; tasks are `assembleV8Debug`, `assembleV7Release`, etc.
 - **SDK levels** (`build-logic/.../build/config/BuildConfig.kt`): `COMPILE_SDK=36`, `MIN_SDK=28`, `TARGET_SDK=28`. **`TARGET_SDK` is deliberately pinned at 28:** higher targets enforce W^X (write-xor-execute), which blocks executing code from app-writable files. That is fatal for an on-device IDE that compiles and runs code (Gradle, `javac`, Termux binaries), so it is a hard requirement, not tech debt. `MIN_SDK_FOR_APPS_BUILT_WITH_COGO=16` is the floor for the apps a *user* builds with CoGo — distinct from CoGo's own `MIN_SDK`.
-- **Native asset bundling.** The on-device LLM (`llama-impl`) ships as a per-flavor native AAR, wired through the root `build.gradle.kts` (`bundleLlamaV8Assets` / `assembleV8Assets`, …); prebuilt per-flavor assets live under `assets/release/v7/` and `assets/release/v8/`.
+- **Native/toolchain asset bundling.** Architecture-specific Android SDK and Termux bootstrap payloads live under `assets/release/v7/` and `assets/release/v8/`; common Gradle, documentation, template, and local-Maven assets live under `assets/release/common/`. `:app:assembleV8Assets` / `:app:assembleV7Assets` select the matching inputs. AI/llama components are plugin-owned and are not part of the core asset graph.
 - **Native lib compression** (ADFA-2306, ADFA-4729). The app manifest hard-codes `android:extractNativeLibs="true"` (required: the installer must materialize libs in `nativeLibraryDir`, e.g. `libshizuku.so` is an executable the adb shell runs from there). That attribute overrides the `jniLibs.useLegacyPackaging` DSL, so AGP packages `lib/<abi>/*.so` deflate-compressed in **every** APK — ~5.9 MB smaller (`libtree-sitter-kotlin.so` alone is 4.18 MB → 339 kB). The trap is the `recompressApk` post-step (release always, debug in CI only): its no-compress lists in `app/build.gradle.kts` must NOT contain `"so"`, or it silently re-stores the libs and undoes the saving — which is what ADFA-2306 fixed for release and ADFA-4729 for CI debug. Locally built debug APKs (including the e2e farm's) never run that step and were always fine.
-- **`app` package layout is by concern, not feature:** `activities`, `fragments`, `services`, `di`, `agent`, `viewmodel(s)`, `repositories`, `roomData`, `localWebServer`, `preferences`, `ui` (Compose screens live under `ui/compose`), `templates/manager` (the Manager screen's `.cgt`-parsing data layer, with direct filesystem access to `Environment.TEMPLATES_DIR` — distinct from the plugin-facing `IdeTemplateService` in `plugin-api`/`plugin-manager`), `utils`, ….
+- **`app` package layout is by concern, not feature:** `activities`, `fragments`, `services`, `di`, `viewmodel(s)`, `repositories`, `roomData`, `localWebServer`, `preferences`, `ui` (Compose screens live under `ui/compose`), `templates/manager` (the Manager screen's `.cgt`-parsing data layer, with direct filesystem access to `Environment.TEMPLATES_DIR` — distinct from the plugin-facing `IdeTemplateService` in `plugin-api`/`plugin-manager`), `utils`, …. There is no in-core `agent` package; AI integrations are plugins.
 
 ## Technology Stack
 
@@ -104,11 +103,10 @@ These structural facts shape every module. Day-to-day build *commands* live in `
 | UI | **Jetpack Compose for all new UI** ([ADR 0009](docs/adr/0009-jetpack-compose-for-new-ui.md)); first production screen is the Manager screen (Plugins/Templates tabs, `app/.../ui/compose/`, ADFA-4928). The existing majority is still Android Views + Fragments + `RecyclerView` (Material Components); those legacy screens stay until reworked, but new IDE UI is Compose-only. |
 | Dependency Injection | **Koin** (`org.koin`) — `coreModule`/`pluginModule`/`templateModule`, `startKoin` in `IDEApplication`, plus a `ServiceLocator : KoinComponent` for lazy post-startup access. No Hilt/Dagger. |
 | Asynchronous work | **Kotlin Coroutines + Flow** (`StateFlow`/`SharedFlow`, `viewModelScope`, app-scoped `CoroutineScope(SupervisorJob() + Dispatchers.IO)`); **GreenRobot EventBus** for cross-subsystem events. |
-| Networking | Offline-first; no general REST layer. External I/O is **Google GenAI SDK** (Gemini), **on-device llama.cpp**, and **JGit** (git). Retrofit is in the catalog but effectively unused in app code. |
+| Networking | Offline-first; no general REST layer. Core external I/O is primarily **JGit** (git) plus user-initiated asset/document downloads. Networked AI integrations belong to separately distributed plugins, not the core. |
 | Database / Persistence | **Room** is the default for relational/queryable data; **filesystem + preferences (DataStore)** for non-relational settings. **Raw SQLite** (`SQLiteDatabase` / `SupportSQLiteOpenHelper`) only for justified exceptions (see policy below). |
 | Serialization | `kotlinx.serialization` and Gson. |
 | Parceling | Kotlin **`@Parcelize`** (`kotlin-parcelize` plugin) for `Parcelable` data classes — never hand-implement `Parcelable`. Do it manually only if `@Parcelize` genuinely can't express it (custom serialization logic, unsupported member types). |
-| AI agent | Google GenAI (cloud) + llama (local), behind `GeminiRepository` / `SwitchableGeminiRepository`, with planner/critic/executor agents in `agent/repository`. |
 
 > **Persistence policy (authoritative):** new relational/queryable persistence uses **Room** (`@Entity` + DAO + `RoomDatabase` with explicit migrations, provided via Koin). Non-relational settings use the **filesystem/preferences (DataStore)**. **Raw SQLite is the exception, not the default** — see [ADR 0001](docs/adr/0001-prefer-room-for-persistence.md).
 >
@@ -124,7 +122,7 @@ These structural facts shape every module. Day-to-day build *commands* live in `
 - **Either shape** is exposed as a `StateFlow<…UiState>`; the ViewModel mutates a private `MutableStateFlow` — `update { it.copy(...) }` for a data class, or emit the next subtype for a sealed state. Derived flags live as computed properties (data class) or are implied by the subtype (sealed), so the UI stays dumb.
 - **One-shot effects** (errors, navigation, dialogs, restart prompts) are modeled as a **sealed `…UiEffect`** emitted through a separate `SharedFlow` — never folded into the persistent state, so they don't replay on rotation.
 - **Inbound intents** are a sealed `…UiEvent` (or direct ViewModel method calls on older screens).
-- **Process/long-task state** uses dedicated sealed hierarchies — e.g. `BuildState`, `TaskState`, `InstallationState`, `ApkInstallationViewModel.SessionState`, `agent/AgentState`.
+- **Process/long-task state** uses dedicated sealed hierarchies — e.g. `BuildState`, `TaskState`, `InstallationState`, `ApkInstallationViewModel.SessionState`.
 - **Legacy screens** still expose `LiveData` (~8 ViewModels) instead of `StateFlow` (~20). When touching one substantially, prefer migrating it to `StateFlow`.
 
 Two shapes, chosen by whether the states are mutually exclusive.

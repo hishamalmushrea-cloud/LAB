@@ -168,7 +168,6 @@
   <string name="msg_clear_cache">هذا الأمر سيقوم بحذف مسار/مجلد البيانات المؤقتة الذي تم أنشاءه بواسطة Gradle. إذا حذفته، قد تتأخر عملية البناء نسبياً كما سيتم تنزيل الملفات المطلوبة بواسطة Gradle مرة أخرى.\n\nهل أنت متيقِّن من حذف التخزين المؤقت؟</string>
   <!-- Error Messages used while Logging -->
   <!-- Layout preview and designer -->
-  <string name="title_preview_layout">معاينة التخطيط</string>
   <string name="title_viewaction_delete">حذف</string>
   <string name="msg_yesno_def_title">يرجى التأكيد</string>
   <string name="msg_yesno_def_message">هل أنت متأكد؟</string>
@@ -383,7 +382,6 @@
   <string name="title_app_version">إصدار التطبيق</string>
   <string name="title_country">البلد</string>
   <string name="title_cpu_arch">بناء CPU</string>
-  <string name="title_preview_data">معاينة البيانات</string>
   <string name="title_android_version">اصدار الاندرويد</string>
   <string name="btn_opt_in">الاشتراك</string>
   <string name="title_developer_options">خيارات المطور</string>

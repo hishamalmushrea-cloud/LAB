@@ -35,53 +35,6 @@
     <string name="action_free_up_space">Free Up Space</string>
 
 	<!-- Agent -->
-	<string name="agent_backend_selected">🤖 System: %1$s backend selected.</string>
-	<string name="agent_current_model">Current model: %1$s</string>
-	<string name="agent_no_model_selected_warning">⚠️ Warning: No model file selected.</string>
-	<string name="agent_local_model_not_loaded">Local model is not loaded. Open AI Settings, pick a model, and try again.</string>
-	<string name="agent_backend_not_ready">The AI backend is not ready. Please review your AI settings.</string>
-	<string name="agent_local_model_loaded_success">Local model loaded successfully!</string>
-	<string name="agent_local_model_loaded_failure">Error: Failed to load local model.</string>
-	<string name="agent_operation_cancelled_by_user">Operation cancelled by user.</string>
-	<string name="agent_planner_tool_fallback">The planner could not produce a valid tool invocation after multiple attempts. Provide a direct textual answer without calling any tools.</string>
-	<string name="agent_planner_reject_unexpected_tool">The previous plan was rejected because the model attempted to call a tool even though no tool calls were allowed at that time.</string>
-	<string name="agent_planner_reject_malformed_tool">The previous plan failed because the tool invocation was malformed.</string>
-	<string name="agent_planner_reject_invalid_tool">The previous plan was rejected due to an invalid tool invocation.</string>
-	<string name="agent_planner_tool_blocked_note"> Tool `%1$s` is now blocked until you can explain how to call it safely.</string>
-	<string name="agent_planner_retry_instruction">%1$s%2$s Before attempting another tool call, double-check the required parameters and confirm that calling a tool is necessary. If the request can be answered conceptually, respond with text instead of forcing a tool call.</string>
-	<string name="agent_planner_invalid_output_notice">Planner output was invalid. Asking it to correct the plan...</string>
-	<string name="agent_tool_call_missing_name">A function call without a name was emitted. Provide a valid tool name.</string>
-	<string name="agent_tool_call_unknown_tool">Unknown tool `%1$s` was requested. Use only the supported tools.</string>
-	<string name="agent_tool_call_blocked">Tool `%1$s` is temporarily blocked after a malformed invocation. Choose a different tool or respond with a textual answer.</string>
-	<string name="agent_tool_call_missing_args">Tool `%1$s` is missing required arguments: %2$s.</string>
-	<string name="agent_planner_invalid_tool_usage_header">The previous plan violated tool requirements:\n</string>
-	<string name="agent_planner_invalid_tool_usage_footer">Re-plan with valid tool arguments, or provide a textual response if tools are unnecessary.</string>
-	<string name="agent_planner_invalid_tool_usage_notice">Planner proposed invalid tool usage. Requesting a corrected plan...</string>
-	<string name="agent_approval_deny">Deny</string>
-	<string name="agent_approval_once">Approve Once</string>
-	<string name="agent_approval_session">Approve for Session</string>
-	<string name="agent_approval_title">Approve \'%1$s\'?</string>
-	<string name="agent_dialog_cancel">Cancel</string>
-	<string name="agent_dialog_run">Run</string>
-	<string name="agent_hint_boolean">true or false</string>
-	<string name="agent_hint_file_content">File content...</string>
-	<string name="agent_hint_limit">1000</string>
-	<string name="agent_hint_number">Enter a number</string>
-	<string name="agent_hint_offset">0</string>
-	<string name="agent_hint_param">Enter %1$s</string>
-	<string name="agent_hint_path_example">e.g., app/src/main/AndroidManifest.xml</string>
-	<string name="agent_hint_search_pattern">Search pattern...</string>
-	<string name="agent_images_selected">%1$d images selected.</string>
-	<string name="agent_required_fields_missing">Please fill in all required fields (marked with *).</string>
-	<string name="agent_select_tool_to_test">Select a tool to test</string>
-	<string name="agent_test_tool_title">Test Tool: %1$s</string>
-	<string name="agent_title_ellipsis_suffix">...</string>
-	<string name="agent_tokens_na">Tokens: N/A</string>
-	<string name="agent_tokens_percentage">Tokens: %1$d%%</string>
-	<string name="agent_tool_description_missing">No description</string>
-	<string name="agent_tool_no_params">Description: %1$s\n\nThis tool has no parameters.</string>
-	<string name="agent_tool_not_found">Tool not found: %1$s</string>
-	<string name="agent_run_tool_title">Run %1$s</string>
 
 	<!-- LSP, Diagnostics & Completions -->
 	<string name="get_started">Get started</string>
@@ -359,8 +312,6 @@
 	<!-- Error Messages used while Logging -->
 
 	<!-- Layout preview and designer -->
-	<string name="title_preview_layout">Preview Layout</string>
-	<string name="title_preview_compose">Preview Compose</string>
 	<string name="title_viewaction_delete">Delete</string>
 	<string name="msg_yesno_def_title">Please confirm</string>
 	<string name="msg_yesno_def_message">Are you sure?</string>
@@ -376,8 +327,6 @@
     <string name="xml_validation_error_generic">We could not open this layout. Fix the XML and try again.</string>
 	<string name="title_generating_xml">Generating XML code</string>
 	<string name="msg_swipe_up">Swipe up to display logs, diagnostics, debug info, and more</string>
-	<string name="preview_render_error_title">Preview Unavailable</string>
-	<string name="preview_render_error_message">Could not create a root view. The XML is empty or missing a valid top-level element.</string>
 
 	<!-- Crash Screen -->
 	<string name="msg_ide_crashed">Code on the Go crashed</string>
@@ -395,8 +344,6 @@
 	<string name="title_translations">Translations</string>
 	<string name="action_expand_selection">Expand selection</string>
 	<string name="action_explain_selection">Explain selection</string>
-	<string name="msg_ai_gemini_api_key_missing">Gemini API key is missing. Add it in AI Settings.</string>
-	<string name="msg_ai_local_model_not_loaded">Local model is not loaded. Load a model in AI Settings.</string>
 	<string name="idepref_java_matchLower_title">Match completions in lower case</string>
 	<string name="title_common">Common</string>
 	<string name="idepref_editor_category_common" translatable="false">@string/title_common</string>
@@ -781,7 +728,6 @@
 	<string name="title_app_version">App version</string>
 	<string name="title_country">Country</string>
 	<string name="title_cpu_arch">CPU arch</string>
-	<string name="title_preview_data">Preview data</string>
 	<string name="title_android_version">Android version</string>
 	<string name="btn_opt_in">Opt-in</string>
 	<string name="title_developer_options">Developer Options</string>
@@ -1144,7 +1090,6 @@
 	<string name="cd_toolbar_undo">Undo</string>
 	<string name="cd_toolbar_redo">Redo</string>
 	<string name="cd_toolbar_save">Save</string>
-	<string name="cd_toolbar_preview_layout">Preview layout</string>
 	<string name="cd_toolbar_find">Find</string>
 	<string name="cd_toolbar_find_in_file">Find in file</string>
 	<string name="cd_toolbar_find_in_project">Find in project</string>
@@ -1381,30 +1326,8 @@
 	<string name="youtube_channel_url">https://youtube.com/@appdevforall</string>
 	<string name="bilibili_video_url">https://www.bilibili.com/video/BV1AUgR6sE3G/</string>
 
-	<!-- AI Agent -->
-	<string name="ai_setting_saved">💾 Saved: %1$s</string>
-	<string name="ai_setting_no_model_is_currently_loaded">🤷‍♀️ No model is currently loaded</string>
-	<string name="ai_setting_loading_model_please_wait">🔄 Loading model, please wait…</string>
-	<string name="ai_setting_model_loaded">✅ Model loaded: %1$s</string>
-	<string name="ai_setting_error_loading_model">❌ Error loading model: %1$s</string>
 
-	<!-- Model load errors -->
-	<string name="model_error_engine_init">Inference engine could not be initialized.</string>
-	<string name="model_error_copy_failed">Could not copy the model file.</string>
-	<string name="model_error_verification_failed">Model file verification failed.</string>
-	<string name="model_error_load_failed">Failed to load model \'%1$s\'.</string>
-	<string name="model_error_format_unsupported">This model format is not supported.</string>
-	<string name="model_error_embedding">The selected model \'%1$s\' is an embedding model designed for semantic search and similarity tasks. It cannot be used for chat or text generation.\n\nPlease select a chat/instruct model instead (e.g., models with \'chat\', \'instruct\', \'conversational\' in their name).</string>
-	<string name="model_error_format_onnx">ONNX models (.onnx) are not supported.\n\nThis app uses llama.cpp which only supports GGUF format (.gguf).\n\nTo use this model:\n1. Convert it to GGUF format using llama.cpp conversion tools\n2. Or download a pre-converted GGUF version from Hugging Face</string>
-	<string name="model_error_format_pytorch">PyTorch models (.pt, .pth, .bin) are not supported.\n\nThis app uses llama.cpp which only supports GGUF format (.gguf).\n\nTo use this model:\n1. Convert it to GGUF format using convert_hf_to_gguf.py\n2. Or download a pre-converted GGUF version from Hugging Face</string>
-	<string name="model_error_format_safetensors">SafeTensors models (.safetensors) are not directly supported.\n\nThis app uses llama.cpp which only supports GGUF format (.gguf).\n\nTo use this model:\n1. Convert it to GGUF format using convert_hf_to_gguf.py\n2. Or download a pre-converted GGUF version from Hugging Face</string>
-	<string name="model_error_format_tensorflow">TensorFlow models (.pb) are not supported.\n\nThis app uses llama.cpp which only supports GGUF format (.gguf).\n\nTo use this model:\n1. Convert it to GGUF format using appropriate conversion tools\n2. Or download a pre-converted GGUF version from Hugging Face</string>
-	<string name="model_error_format_tflite">TensorFlow Lite models (.tflite) are not supported.\n\nThis app uses llama.cpp which only supports GGUF format (.gguf).\n\nPlease select a GGUF format model.</string>
-	<string name="model_error_format_ggml">GGML models (.ggml) are deprecated.\n\nThis app uses the newer GGUF format (.gguf).\n\nTo use this model:\n1. Convert it to GGUF using convert_llama_ggml_to_gguf.py\n2. Or download a GGUF version from Hugging Face</string>
 
-	<string name="ai_disclaimer">Disclaimer</string>
-	<string name="ai_disclaimer_message">This AI agent is experimental and may give incorrect or harmful answers. Always back up your work before you try it, and always double-check its suggestions before using them. We are not responsible for any errors, bugs, or damage caused by its output. Use at your own risk.</string>
-    <string name="ai_api_key_not_found">❌ No Gemini API Key found.\nIf you recently updated or reinstalled the app, your API key may have been reset.\nPlease add your Gemini key again in AI Settings.</string>
 
 	<!-- Plugins -->
 	<string name="title_plugin_manager">Plugin Manager</string>
@@ -1458,30 +1381,7 @@
 
 
     <string name="retry">Retry</string>
-    <string name="open_ai_settings">Open AI Settings</string>
-    <string name="new_chat">New chat</string>
-    <string name="experimental_ai_use_at_your_own_risk">⚠️ Experimental AI. Use at your own risk.</string>
-    <string name="current_ai_backend">Current AI Backend</string>
-    <string name="stop_generation">Stop Generation</string>
-    <string name="send_message">Send Message</string>
-    <string name="upload_image">Upload Image</string>
-    <string name="add_context_file">Add Context File</string>
-    <string name="type_a_message_or_prompt">Type a message or prompt…</string>
-    <string name="ai_setting_initializing_engine">Initializing engine</string>
-    <string name="ai_setting_engine_ready">Engine is ready.</string>
-	<string name="title_image_to_layout">Image to Layout</string>
 
-	<!-- Compose Preview -->
-	<string name="preview_error_title">Preview Error</string>
-	<string name="preview_empty_title">No @Preview composables found</string>
-	<string name="preview_empty_message">Add @Preview annotation to a @Composable function to see it here</string>
-	<string name="title_compose_preview">Compose Preview</string>
-	<string name="toggle_preview_mode">Toggle preview mode</string>
-	<string name="preview_build_required_title">Build Required</string>
-	<string name="preview_build_required_message">Build the project to enable multi-file preview support</string>
-	<string name="preview_build_project">Build Project</string>
-	<string name="preview_building_project">Building project…</string>
-	<string name="preview_initializing">Initializing Compose preview…</string>
 
 	<!-- Copy Diagnostics -->
 	<string name="msg_diagnostics_copied">Diagnostics copied to clipboard</string>

@@ -168,7 +168,6 @@
   <string name="msg_clear_cache">Acest lucru va șterge directorul cache creat de Gradle. Dacă îl ștergeți, următoarea versiune poate dura un pic mai mult decât în mod normal, deoarece Gradle va descărca din nou fișierele necesare.\n\nSunteți sigur că doriți să ștergeți cache-urile?</string>
   <!-- Error Messages used while Logging -->
   <!-- Layout preview and designer -->
-  <string name="title_preview_layout">Previzualizare Layout</string>
   <string name="title_viewaction_delete">Ștergere</string>
   <string name="msg_yesno_def_title">Vă rugăm să confirmați</string>
   <string name="msg_yesno_def_message">Eşti sigur?</string>
@@ -383,7 +382,6 @@
   <string name="title_app_version">App version</string>
   <string name="title_country">Country</string>
   <string name="title_cpu_arch">CPU Arch</string>
-  <string name="title_preview_data">Preview data</string>
   <string name="title_android_version">Versiune Android</string>
   <string name="btn_opt_in">Opt-in</string>
   <string name="title_developer_options">Developer options</string>

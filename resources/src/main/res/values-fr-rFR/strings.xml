@@ -169,7 +169,6 @@ Dernier projet ouvert : \n%s</string>
   <string name="msg_clear_cache">Les fichiers caches vont être supprimés. Une fois supprimé, la prochaine compilation prendra plus de temps que la normale pour régénérer les fichiers nécessaires.\n\nÊtes-vous sûr de supprimer le cache ?</string>
   <!-- Error Messages used while Logging -->
   <!-- Layout preview and designer -->
-  <string name="title_preview_layout">Aperçu du Layout</string>
   <string name="title_viewaction_delete">Supprimer</string>
   <string name="msg_yesno_def_title">Veuillez confirmez</string>
   <string name="msg_yesno_def_message">Êtes vous sûres ?</string>
@@ -384,7 +383,6 @@ Dernier projet ouvert : \n%s</string>
   <string name="title_app_version">Version de l\'application</string>
   <string name="title_country">Pays</string>
   <string name="title_cpu_arch">Architecture du CPU</string>
-  <string name="title_preview_data">Aperçu des données</string>
   <string name="title_android_version">Version d\'Android</string>
   <string name="btn_opt_in">S\'inscrire</string>
   <string name="title_developer_options">Options développeur</string>

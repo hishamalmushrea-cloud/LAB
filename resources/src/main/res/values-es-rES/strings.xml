@@ -168,7 +168,6 @@
   <string name="msg_clear_cache">Esto eliminará el directorio de cachés creado por Gradle. Si lo elimina, la próxima versión puede tardar un poco más de lo normal, ya que Gradle descargará los archivos requeridos de nuevo.\n\n¿Seguro que quieres eliminar caché?</string>
   <!-- Error Messages used while Logging -->
   <!-- Layout preview and designer -->
-  <string name="title_preview_layout">Previsualizar diseño</string>
   <string name="title_viewaction_delete">Borrar</string>
   <string name="msg_yesno_def_title">Por favor, confirme</string>
   <string name="msg_yesno_def_message">¿Estás seguro?</string>
@@ -383,7 +382,6 @@
   <string name="title_app_version">App version</string>
   <string name="title_country">Country</string>
   <string name="title_cpu_arch">CPU Arch</string>
-  <string name="title_preview_data">Preview data</string>
   <string name="title_android_version">Versión de Android</string>
   <string name="btn_opt_in">Opt-in</string>
   <string name="title_developer_options">Developer options</string>

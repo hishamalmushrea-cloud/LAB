@@ -33,53 +33,6 @@
     <string name="action_free_up_space">释放空间</string>
 
 	<!-- Agent -->
-	<string name="agent_backend_selected">🤖 系统：已选择 %1$s 后端</string>
-	<string name="agent_current_model">当前模型：%1$s</string>
-	<string name="agent_no_model_selected_warning">⚠️ 警告：未选择模型文件</string>
-	<string name="agent_local_model_not_loaded">本地模型未加载，请打开 AI 设置，选择一个模型，然后重试</string>
-	<string name="agent_backend_not_ready">AI 后端尚未就绪，请检查你的 AI 设置</string>
-	<string name="agent_local_model_loaded_success">本地模型加载成功！</string>
-	<string name="agent_local_model_loaded_failure">错误：加载本地模型失败</string>
-	<string name="agent_operation_cancelled_by_user">操作已被用户取消</string>
-	<string name="agent_planner_tool_fallback">规划器在多次尝试后未能生成有效的工具调用，请直接提供文本回答，无需调用任何工具</string>
-	<string name="agent_planner_reject_unexpected_tool">之前的规划被拒绝，因为模型试图调用工具，但当时不允许进行任何工具调用</string>
-	<string name="agent_planner_reject_malformed_tool">之前的规划失败，因为工具调用格式错误</string>
-	<string name="agent_planner_reject_invalid_tool">之前的规划因无效的工具调用被拒绝</string>
-	<string name="agent_planner_tool_blocked_note">工具 `%1$s` 已被屏蔽，直到你能解释如何安全调用它为止</string>
-	<string name="agent_planner_retry_instruction">%1$s%2$s 在尝试再次调用工具之前，请仔细检查所需参数并确认调用工具的必要性，如果可以用概念性方式回答请求，请用文本回复，而不是强行调用工具</string>
-	<string name="agent_planner_invalid_output_notice">规划器输出无效 正在请求修正规划...</string>
-	<string name="agent_tool_call_missing_name">发出了一个没有名称的函数调用，请提供有效的工具名称</string>
-	<string name="agent_tool_call_unknown_tool">请求了未知工具 `%1$s` 请仅使用支持的工具</string>
-	<string name="agent_tool_call_blocked">工具 `%1$s` 因格式错误的调用被临时屏蔽 请选择其他工具或以文本方式回复 </string>
-	<string name="agent_tool_call_missing_args">工具 `%1$s` 缺少必需的参数：%2$s </string>
-	<string name="agent_planner_invalid_tool_usage_header">之前的规划违反了工具要求：\n</string>
-	<string name="agent_planner_invalid_tool_usage_footer">请使用有效的工具参数重新规划，或者在不必要使用工具时提供文本回复 </string>
-	<string name="agent_planner_invalid_tool_usage_notice">规划器提出了无效的工具用法 正在请求修正规划...</string>
-	<string name="agent_approval_deny">拒绝</string>
-	<string name="agent_approval_once">允许一次</string>
-	<string name="agent_approval_session">本次会话允许</string>
-	<string name="agent_approval_title">是否允许 \'%1$s\'？</string>
-	<string name="agent_dialog_cancel">取消</string>
-	<string name="agent_dialog_run">运行</string>
-	<string name="agent_hint_boolean">true 或 false</string>
-	<string name="agent_hint_file_content">文件内容</string>
-	<string name="agent_hint_limit">1000</string>
-	<string name="agent_hint_number">输入一个数字</string>
-	<string name="agent_hint_offset">0</string>
-	<string name="agent_hint_param">输入 %1$s</string>
-	<string name="agent_hint_path_example">例如：app/src/main/AndroidManifest.xml</string>
-	<string name="agent_hint_search_pattern">搜索模式...</string>
-	<string name="agent_images_selected">已选择 %1$d 张图片</string>
-	<string name="agent_required_fields_missing">请填写所有必填字段(标有*)</string>
-	<string name="agent_select_tool_to_test">选择一个要测试的工具</string>
-	<string name="agent_test_tool_title">测试工具：%1$s</string>
-	<string name="agent_title_ellipsis_suffix">...</string>
-	<string name="agent_tokens_na">令牌数：N/A</string>
-	<string name="agent_tokens_percentage">令牌数：%1$d%%</string>
-	<string name="agent_tool_description_missing">无描述</string>
-	<string name="agent_tool_no_params">描述：%1$s\n\n此工具没有参数</string>
-	<string name="agent_tool_not_found">未找到工具：%1$s</string>
-	<string name="agent_run_tool_title">运行 %1$s</string>
 
 	<!-- LSP, Diagnostics & Completions -->
 	<string name="get_started">开始使用</string>
@@ -342,8 +295,6 @@
 	<!-- Error Messages used while Logging -->
 
 	<!-- Layout preview and designer -->
-	<string name="title_preview_layout">预览布局</string>
-	<string name="title_preview_compose">预览 Compose</string>
 	<string name="title_viewaction_delete">删除</string>
 	<string name="msg_yesno_def_title">请确认</string>
 	<string name="msg_yesno_def_message">确定吗？</string>
@@ -359,8 +310,6 @@
     <string name="xml_validation_error_generic">无法打开此布局  请修复 XML 后重试</string>
 	<string name="title_generating_xml">正在生成 XML 代码</string>
 	<string name="msg_swipe_up">上滑以显示日志、诊断、调试信息等</string>
-	<string name="preview_render_error_title">预览不可用</string>
-	<string name="preview_render_error_message">无法创建根视图  XML 为空或缺少有效的顶级元素</string>
 
 	<!-- Crash Screen -->
 	<string name="msg_ide_crashed">Code on the Go 崩溃了</string>
@@ -374,8 +323,6 @@
 	<string name="title_translations">翻译</string>
 	<string name="action_expand_selection">展开选择</string>
 	<string name="action_explain_selection">解释所选内容</string>
-	<string name="msg_ai_gemini_api_key_missing">缺少 Gemini API 密钥 请在 AI 设置中添加 </string>
-	<string name="msg_ai_local_model_not_loaded">本地模型未加载 请在 AI 设置中加载模型 </string>
 	<string name="idepref_java_matchLower_title">小写匹配补全</string>
 	<string name="title_common">通用</string>
 	<string name="idepref_editor_category_common" translatable="false">@string/title_common</string>
@@ -666,7 +613,6 @@
 	<string name="title_app_version">应用版本</string>
 	<string name="title_country">国家/地区</string>
 	<string name="title_cpu_arch">CPU 架构</string>
-	<string name="title_preview_data">预览数据</string>
 	<string name="title_android_version">Android 版本</string>
 	<string name="btn_opt_in">同意</string>
 	<string name="title_developer_options">开发者选项</string>
@@ -1001,7 +947,6 @@
 	<string name="cd_toolbar_undo">撤销</string>
 	<string name="cd_toolbar_redo">重做</string>
 	<string name="cd_toolbar_save">保存</string>
-	<string name="cd_toolbar_preview_layout">预览布局</string>
 	<string name="cd_toolbar_find">查找</string>
 	<string name="cd_toolbar_find_in_file">在文件中查找</string>
 	<string name="cd_toolbar_find_in_project">在项目中查找</string>
@@ -1186,30 +1131,8 @@
 	<string name="adfa_email">info@appdevforall.org</string>
 	<string name="mail_to_adfa">mailto:info@appdevforall.org</string>
 
-	<!-- AI Agent -->
-	<string name="ai_setting_saved">💾 已保存：%1$s</string>
-	<string name="ai_setting_no_model_is_currently_loaded">🤷‍♀️ 当前未加载模型</string>
-	<string name="ai_setting_loading_model_please_wait">🔄 正在加载模型，请稍候…</string>
-	<string name="ai_setting_model_loaded">✅ 模型已加载：%1$s</string>
-	<string name="ai_setting_error_loading_model">❌ 加载模型出错：%1$s</string>
 
-	<!-- Model load errors -->
-	<string name="model_error_engine_init">推理引擎无法初始化 </string>
-	<string name="model_error_copy_failed">无法复制模型文件 </string>
-	<string name="model_error_verification_failed">模型文件验证失败 </string>
-	<string name="model_error_load_failed">加载模型 \'%1$s\' 失败 </string>
-	<string name="model_error_format_unsupported">此模型格式不受支持 </string>
-	<string name="model_error_embedding">所选模型 \'%1$s\' 是一个嵌入模型，专为语义搜索和相似性任务设计 它不能用于聊天或文本生成 \n\n请选择聊天/指令模型（例如名称中带有 \'chat\'、\'instruct\'、\'conversational\' 的模型） </string>
-	<string name="model_error_format_onnx">不支持 ONNX 模型（.onnx） \n\n此应用使用 llama.cpp，仅支持 GGUF 格式（.gguf） \n\n要使用此模型：\n1. 使用 llama.cpp 转换工具将其转换为 GGUF 格式\n2. 或者从 Hugging Face 下载预转换的 GGUF 版本</string>
-	<string name="model_error_format_pytorch">不支持 PyTorch 模型（.pt、.pth、.bin） \n\n此应用使用 llama.cpp，仅支持 GGUF 格式（.gguf） \n\n要使用此模型：\n1. 使用 convert_hf_to_gguf.py 将其转换为 GGUF 格式\n2. 或者从 Hugging Face 下载预转换的 GGUF 版本</string>
-	<string name="model_error_format_safetensors">不直接支持 SafeTensors 模型（.safetensors） \n\n此应用使用 llama.cpp，仅支持 GGUF 格式（.gguf） \n\n要使用此模型：\n1. 使用 convert_hf_to_gguf.py 将其转换为 GGUF 格式\n2. 或者从 Hugging Face 下载预转换的 GGUF 版本</string>
-	<string name="model_error_format_tensorflow">不支持 TensorFlow 模型（.pb） \n\n此应用使用 llama.cpp，仅支持 GGUF 格式（.gguf） \n\n要使用此模型：\n1. 使用适当的转换工具将其转换为 GGUF 格式\n2. 或者从 Hugging Face 下载预转换的 GGUF 版本</string>
-	<string name="model_error_format_tflite">不支持 TensorFlow Lite 模型（.tflite） \n\n此应用使用 llama.cpp，仅支持 GGUF 格式（.gguf） \n\n请选择 GGUF 格式的模型 </string>
-	<string name="model_error_format_ggml">GGML 模型（.ggml）已弃用 \n\n此应用使用较新的 GGUF 格式（.gguf） \n\n要使用此模型：\n1. 使用 convert_llama_ggml_to_gguf.py 将其转换为 GGUF 格式\n2. 或者从 Hugging Face 下载 GGUF 版本</string>
 
-	<string name="ai_disclaimer">免责声明</string>
-	<string name="ai_disclaimer_message">此 AI 代理为实验性功能，可能给出不正确或有危害的答案 使用前请务必备份你的工作，并在使用其建议前仔细检查 我们对由其输出导致的任何错误、缺陷或损害概不负责 使用风险自负 </string>
-    <string name="ai_api_key_not_found">❌ 未找到 Gemini API 密钥 \n如果你最近更新或重新安装了应用，你的 API 密钥可能已被重置 \n请再次在 AI 设置中添加你的 Gemini 密钥 </string>
 
 	<!-- Plugins -->
 	<string name="title_plugin_manager">插件管理器</string>
@@ -1231,30 +1154,7 @@
 
 
     <string name="retry">重试</string>
-    <string name="open_ai_settings">打开 AI 设置</string>
-    <string name="new_chat">新建聊天</string>
-    <string name="experimental_ai_use_at_your_own_risk">⚠️ 实验性 AI 使用风险自负 </string>
-    <string name="current_ai_backend">当前 AI 后端</string>
-    <string name="stop_generation">停止生成</string>
-    <string name="send_message">发送消息</string>
-    <string name="upload_image">上传图片</string>
-    <string name="add_context_file">添加上下文文件</string>
-    <string name="type_a_message_or_prompt">输入消息或提示…</string>
-    <string name="ai_setting_initializing_engine">正在初始化引擎</string>
-    <string name="ai_setting_engine_ready">引擎已就绪 </string>
-	<string name="title_image_to_layout">图片转布局</string>
 
-	<!-- Compose Preview -->
-	<string name="preview_error_title">预览错误</string>
-	<string name="preview_empty_title">未找到 @Preview 可组合项</string>
-	<string name="preview_empty_message">向 @Composable 函数添加 @Preview 注解即可在此查看</string>
-	<string name="title_compose_preview">Compose 预览</string>
-	<string name="toggle_preview_mode">切换预览模式</string>
-	<string name="preview_build_required_title">需要构建</string>
-	<string name="preview_build_required_message">请构建项目以启用多文件预览支持</string>
-	<string name="preview_build_project">构建项目</string>
-	<string name="preview_building_project">正在构建项目…</string>
-	<string name="preview_initializing">正在初始化 Compose 预览…</string>
 
 	<!-- Copy Diagnostics -->
 	<string name="msg_diagnostics_copied">诊断信息已复制到剪贴板</string>

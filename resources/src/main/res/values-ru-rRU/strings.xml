@@ -166,7 +166,6 @@
   <string name="msg_clear_cache">Это удалит директорию кэша, созданную Gradle. Если вы удалите её, то следующая сборка может занять больше времени, чем обычно, так как Gradle будет скачивать необходимые файлы заново.\n\nВы уверены, что хотите удалить кэш?</string>
   <!-- Error Messages used while Logging -->
   <!-- Layout preview and designer -->
-  <string name="title_preview_layout">Предпросмотр разметки</string>
   <string name="title_viewaction_delete">Удалить</string>
   <string name="msg_yesno_def_title">Пожалуйста, подтвердите</string>
   <string name="msg_yesno_def_message">Вы уверены?</string>
@@ -385,7 +384,6 @@
   <string name="title_app_version">Версия приложения</string>
   <string name="title_country">Страна</string>
   <string name="title_cpu_arch">Архитектура ЦП</string>
-  <string name="title_preview_data">Предпросмотр данных</string>
   <string name="title_android_version">Версия Android</string>
   <string name="btn_opt_in">Присоединиться</string>
   <string name="title_developer_options">Настройки разработчика</string>

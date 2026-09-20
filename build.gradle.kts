@@ -167,7 +167,6 @@ spotless {
 			"composite-builds/build-deps/jdt/**/*",
 			"composite-builds/build-login/properties-parser/**/*",
 			"eventbus/**/*",
-			"LayoutEditor/**/*",
 			"subprojects/aaptcompiler/src/*/java/com/android/**/*",
 			"subprojects/builder-model-impl/src/*/java/com/android/**/*",
 			"subprojects/flashbar/**/*",

@@ -168,7 +168,6 @@
   <string name="msg_clear_cache">এটি Gradle দ্বারা তৈরি ক্যাশে ডিরেক্টরি মুছে ফেলবে। আপনি এটি মুছে ফেললে, পরবর্তী বিল্ডটি স্বাভাবিকের চেয়ে কিছুটা বেশি সময় নিতে পারে কারণ Gradle প্রয়োজনীয় ফাইলগুলি আবার ডাউনলোড করবে।\n\nআপনি কি ক্যাশে মুছে ফেলার বিষয়ে নিশ্চিত?</string>
   <!-- Error Messages used while Logging -->
   <!-- Layout preview and designer -->
-  <string name="title_preview_layout">প্রিভিউ লেআউট</string>
   <string name="title_viewaction_delete">ডিলিট</string>
   <string name="msg_yesno_def_title">অনুগ্রহ করে নিশ্চিত করুন</string>
   <string name="msg_yesno_def_message">আপনি কি নিশ্চিত?</string>
@@ -383,7 +382,6 @@
   <string name="title_app_version">অ্যাপ সংস্করণ</string>
   <string name="title_country">দেশ</string>
   <string name="title_cpu_arch">CPU আর্ক</string>
-  <string name="title_preview_data">তথ্য পূর্বরূপ</string>
   <string name="title_android_version">অ্যান্ড্রয়েড ভার্সন</string>
   <string name="btn_opt_in">বাছাই করুন</string>
   <string name="title_developer_options">বিকাশকারী অপশনগুলি</string>

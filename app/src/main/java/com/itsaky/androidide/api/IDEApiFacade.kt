@@ -20,7 +20,7 @@ data class ApiResult(
 )
 
 /**
- * The single, clean entry point for the AI agent to interact with the IDE.
+ * The single, clean entry point for external automation plugins to interact with the IDE.
  */
 object IDEApiFacade {
 
