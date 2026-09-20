@@ -40,7 +40,7 @@ jobs:
   # existing deployment jobs below remain behind COTG_ENABLE_UPSTREAM_WORKFLOWS and
   # therefore cannot consume signing/Firebase credentials in the transferred repo.
   phase_one_configuration:
-    if: github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, 'arena/')
+    if: (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && startsWith(github.ref_name, 'arena/')
     name: Phase one - configure Gradle graph
     runs-on: ubuntu-24.04
     timeout-minutes: 45
