@@ -84,14 +84,14 @@ jobs:
           if ! ./gradlew :plugin-manager:testV8DebugUnitTest --stacktrace --no-daemon \
             2>&1 | tee plugin-manager-tests.log; then
             python3 - plugin-manager-tests.log 'Plugin-manager verification failed' <<'PY'
-          import re
           import sys
           path, title = sys.argv[1:]
           lines = open(path, errors='replace').read().splitlines()
-          selected = [line for line in lines if re.search(r'(^e: |\.kt:\d+|FAILURE:|Execution failed|What went wrong|error:)', line, re.I)]
-          text = '\n'.join((selected or lines)[-120:])
-          text = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-          print(f'::error title={title}::{text}')
+          text = '\n'.join([line for line in lines if not line.startswith('w: ')][-180:])
+          for index in range(0, len(text), 3000):
+              chunk = text[index:index + 3000]
+              chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::error title={title} (part {index // 3000 + 1})::{chunk}')
           PY
             {
               echo '## Plugin-manager verification failure'
@@ -136,14 +136,14 @@ jobs:
           if ! ./gradlew :app:compileV8DebugKotlin --stacktrace --no-daemon \
             2>&1 | tee app-compile.log; then
             python3 - app-compile.log 'App integration compilation failed' <<'PY'
-          import re
           import sys
           path, title = sys.argv[1:]
           lines = open(path, errors='replace').read().splitlines()
-          selected = [line for line in lines if re.search(r'(^e: |\.kt:\d+|FAILURE:|Execution failed|What went wrong|error:)', line, re.I)]
-          text = '\n'.join((selected or lines)[-120:])
-          text = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-          print(f'::error title={title}::{text}')
+          text = '\n'.join([line for line in lines if not line.startswith('w: ')][-180:])
+          for index in range(0, len(text), 3000):
+              chunk = text[index:index + 3000]
+              chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::error title={title} (part {index // 3000 + 1})::{chunk}')
           PY
             {
               echo '## App integration compilation failure'
