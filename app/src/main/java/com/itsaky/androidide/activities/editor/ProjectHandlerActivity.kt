@@ -1,0 +1,1273 @@
+/*
+ *  This file is part of AndroidIDE.
+ *
+ *  AndroidIDE is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  AndroidIDE is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *   along with AndroidIDE.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.itsaky.androidide.activities.editor
+
+import android.content.Intent
+import android.os.Bundle
+import android.system.ErrnoException
+import android.system.OsConstants
+import android.view.Gravity
+import android.view.HapticFeedbackConstants
+import android.view.ViewGroup.MarginLayoutParams
+import android.widget.CheckBox
+import android.widget.EditText
+import android.widget.Toast
+import androidx.activity.viewModels
+import androidx.annotation.GravityInt
+import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.itsaky.androidide.R
+import com.itsaky.androidide.actions.ActionData
+import com.itsaky.androidide.actions.ActionItem.Location.EDITOR_FIND_ACTION_MENU
+import com.itsaky.androidide.actions.ActionsRegistry.Companion.getInstance
+import com.itsaky.androidide.actions.etc.FindInFileAction
+import com.itsaky.androidide.actions.etc.FindInProjectAction
+import com.itsaky.androidide.actions.internal.DefaultActionsRegistry
+import com.itsaky.androidide.activities.MainActivity
+import com.itsaky.androidide.app.IDEApplication
+import com.itsaky.androidide.databinding.LayoutSearchProjectBinding
+import com.itsaky.androidide.flashbar.Flashbar
+import com.itsaky.androidide.fragments.FindActionDialog
+import com.itsaky.androidide.fragments.SearchFieldToolbar
+import com.itsaky.androidide.fragments.sheets.ProgressSheet
+import com.itsaky.androidide.handlers.EditorBuildEventListener
+import com.itsaky.androidide.handlers.LspHandler.connectClient
+import com.itsaky.androidide.handlers.LspHandler.connectDebugClient
+import com.itsaky.androidide.handlers.LspHandler.destroyLanguageServers
+import com.itsaky.androidide.idetooltips.TooltipManager
+import com.itsaky.androidide.idetooltips.TooltipTag
+import com.itsaky.androidide.lookup.Lookup
+import com.itsaky.androidide.lsp.IDELanguageClientImpl
+import com.itsaky.androidide.lsp.debug.DebugClientConnectionResult
+import com.itsaky.androidide.lsp.java.utils.CancelChecker
+import com.itsaky.androidide.models.EditorIntentExtras
+import com.itsaky.androidide.models.Position
+import com.itsaky.androidide.models.Range
+import com.itsaky.androidide.models.SearchResult
+import com.itsaky.androidide.plugins.extensions.ProjectSearchExtension
+import com.itsaky.androidide.plugins.extensions.ProjectSearchRequest
+import com.itsaky.androidide.plugins.extensions.ProjectSearchResult
+import com.itsaky.androidide.plugins.extensions.ProjectSearchSection
+import com.itsaky.androidide.projects.ProjectManagerImpl
+import com.itsaky.androidide.projects.builder.BuildService
+import com.itsaky.androidide.projects.models.projectDir
+import com.itsaky.androidide.repositories.PluginRepository
+import com.itsaky.androidide.resources.R.string
+import com.itsaky.androidide.services.builder.GradleBuildService
+import com.itsaky.androidide.services.builder.GradleBuildServiceConnnection
+import com.itsaky.androidide.services.builder.gradleDistributionParams
+import com.itsaky.androidide.tooling.api.messages.AndroidInitializationParams
+import com.itsaky.androidide.tooling.api.messages.BuildId
+import com.itsaky.androidide.tooling.api.messages.BuildRunType
+import com.itsaky.androidide.tooling.api.messages.InitializeProjectParams
+import com.itsaky.androidide.tooling.api.messages.result.InitializeResult
+import com.itsaky.androidide.tooling.api.messages.result.TaskExecutionResult
+import com.itsaky.androidide.tooling.api.messages.result.TaskExecutionResult.Failure.BUILD_CANCELLED
+import com.itsaky.androidide.tooling.api.messages.result.TaskExecutionResult.Failure.CACHE_READ_ERROR
+import com.itsaky.androidide.tooling.api.messages.result.TaskExecutionResult.Failure.PROJECT_DIRECTORY_INACCESSIBLE
+import com.itsaky.androidide.tooling.api.messages.result.TaskExecutionResult.Failure.PROJECT_NOT_DIRECTORY
+import com.itsaky.androidide.tooling.api.messages.result.TaskExecutionResult.Failure.PROJECT_NOT_FOUND
+import com.itsaky.androidide.tooling.api.messages.result.failure
+import com.itsaky.androidide.tooling.api.messages.result.isSuccessful
+import com.itsaky.androidide.tooling.api.models.BuildVariantInfo
+import com.itsaky.androidide.tooling.api.models.mapToSelectedVariants
+import com.itsaky.androidide.tooling.api.sync.ProjectSyncHelper
+import com.itsaky.androidide.utils.DURATION_INDEFINITE
+import com.itsaky.androidide.utils.DialogUtils.newMaterialDialogBuilder
+import com.itsaky.androidide.utils.DialogUtils.showRestartPrompt
+import com.itsaky.androidide.utils.RecursiveFileSearcher
+import com.itsaky.androidide.utils.dpToPx
+import com.itsaky.androidide.utils.flashError
+import com.itsaky.androidide.utils.flashInfo
+import com.itsaky.androidide.utils.flashSuccess
+import com.itsaky.androidide.utils.flashbarBuilder
+import com.itsaky.androidide.utils.onLongPress
+import com.itsaky.androidide.utils.resolveAttr
+import com.itsaky.androidide.utils.showOnUiThread
+import com.itsaky.androidide.utils.withIcon
+import com.itsaky.androidide.viewmodel.BottomSheetViewModel
+import com.itsaky.androidide.viewmodel.BuildState
+import com.itsaky.androidide.viewmodel.BuildVariantsViewModel
+import com.itsaky.androidide.viewmodel.BuildViewModel
+import com.itsaky.androidide.viewmodel.EditorViewModel.SearchResultSection
+import io.github.rosemoe.sora.text.ICUUtils
+import io.github.rosemoe.sora.util.IntPair
+import io.sentry.Sentry
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import org.adfa.constants.CONTENT_KEY
+import org.koin.android.ext.android.inject
+import org.slf4j.LoggerFactory
+import java.io.File
+import java.io.FileNotFoundException
+import java.net.SocketException
+import java.nio.file.NoSuchFileException
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import java.util.regex.Pattern
+import java.util.stream.Collectors
+
+/** @author Akash Yadav */
+@Suppress("MemberVisibilityCanBePrivate")
+abstract class ProjectHandlerActivity : BaseEditorActivity() {
+	protected val buildVariantsViewModel by viewModels<BuildVariantsViewModel>()
+	private val pluginRepository: PluginRepository by inject()
+
+	protected var mSearchingProgress: ProgressSheet? = null
+	protected var mFindInProjectDialog: AlertDialog? = null
+	protected var syncNotificationFlashbar: Flashbar? = null
+
+	private val buildViewModel by viewModels<BuildViewModel>()
+	protected var initializingFuture: CompletableFuture<out InitializeResult?>? = null
+	private val Throwable?.isFileNotFound: Boolean
+		get() =
+			this is FileNotFoundException ||
+				this is NoSuchFileException ||
+				(this is ErrnoException && this.errno == OsConstants.ENOENT)
+
+	val findInProjectDialog: AlertDialog?
+		get() {
+			if (mFindInProjectDialog == null) {
+				createFindInProjectDialog()
+			}
+			return mFindInProjectDialog
+		}
+
+	fun findActionDialog(actionData: ActionData): FindActionDialog {
+		val shouldHideFindInFileAction = editorViewModel.getOpenedFileCount() != 0
+		val registry = getInstance() as DefaultActionsRegistry
+
+		return FindActionDialog(
+			anchor = content.projectActionsToolbar.findViewById(R.id.menu_container),
+			context = this,
+			actionData = actionData,
+			shouldShowFindInFileAction = shouldHideFindInFileAction,
+			onFindInFileClicked = { data ->
+				val findInFileAction =
+					registry.findAction(
+						location = EDITOR_FIND_ACTION_MENU,
+						id = FindInFileAction().id,
+					)
+				if (findInFileAction != null) {
+					registry.executeAction(findInFileAction, data)
+				}
+			},
+			onFindInProjectClicked = { data ->
+				val findInProjectAction =
+					registry.findAction(
+						location = EDITOR_FIND_ACTION_MENU,
+						id = FindInProjectAction().id,
+					)
+				if (findInProjectAction != null) {
+					registry.executeAction(findInProjectAction, data)
+				}
+			},
+		)
+	}
+
+	protected val mBuildEventListener = EditorBuildEventListener()
+
+	private val buildServiceConnection = GradleBuildServiceConnnection()
+
+	// True once onCreate() has completed past its isFinishing check -- mirrors
+	// EditorHandlerActivity.didCompleteLiveOnCreate. super.onCreate() (BaseEditorActivity) may
+	// already have called finish() for a doomed instance spun up by a stale deep-link liveness
+	// check; finish() doesn't stop execution, so without this flag preDestroy() would unregister
+	// the process-wide build-service Lookup entry and shut down the LSP singleton that an
+	// actually-live sibling instance still depends on.
+	private var didCompleteLiveOnCreate = false
+
+	companion object {
+		private val logger = LoggerFactory.getLogger(ProjectHandlerActivity::class.java)
+
+		const val STATE_KEY_FROM_SAVED_INSTANACE = "ide.editor.isFromSavedInstance"
+		const val STATE_KEY_SHOULD_INITIALIZE = "ide.editor.isInitializing"
+
+		private const val PLUGIN_SEARCH_TIMEOUT_SECONDS = 10L
+	}
+
+	abstract fun doCloseAll()
+
+	abstract fun saveOpenedFiles()
+
+	override fun doDismissSearchProgress() {
+		if (mSearchingProgress?.isShowing == true) {
+			mSearchingProgress!!.dismiss()
+		}
+	}
+
+	override fun doOpenHelp() {
+		openHelpActivity()
+	}
+
+	override fun onCreate(savedInstanceState: Bundle?) {
+		super.onCreate(savedInstanceState)
+
+		// super.onCreate() may have already called finish() for a doomed instance (see
+		// EditorHandlerActivity.onCreate's own isFinishing guard for the fuller explanation);
+		// finish() doesn't stop execution here, so without this check startServices() below would
+		// unconditionally bind a build service and register a listener that preDestroy() will
+		// later tear down, corrupting the actually-live sibling instance's state.
+		if (isFinishing) {
+			return
+		}
+		didCompleteLiveOnCreate = true
+
+		editorViewModel._isSyncNeeded.observe(this) { isSyncNeeded ->
+			if (!isSyncNeeded) {
+				// dismiss if already showing
+				syncNotificationFlashbar?.dismiss()
+				return@observe
+			}
+
+			if (syncNotificationFlashbar?.isShowing() == true) {
+				// already shown
+				return@observe
+			}
+
+			notifySyncNeeded()
+		}
+
+		observeStates()
+		startServices()
+
+		if (intent.getBooleanExtra(EditorIntentExtras.EXTRA_HAS_TEMPLATE_ISSUES, false)) {
+			flashError(getString(string.msg_template_warnings))
+		}
+	}
+
+	private fun observeStates() {
+		lifecycleScope.launch {
+			repeatOnLifecycle(Lifecycle.State.STARTED) {
+				launch {
+					buildViewModel.buildState.collect { onBuildStateChanged(it) }
+				}
+			}
+		}
+	}
+
+	private fun onBuildStateChanged(state: BuildState) {
+		editorViewModel.isBuildInProgress = (state is BuildState.InProgress)
+		when (state) {
+			is BuildState.Idle -> {
+				// Nothing to do, build is finished or not started.
+			}
+
+			is BuildState.InProgress -> {
+				setStatus(getString(R.string.status_building))
+			}
+
+			is BuildState.Success -> {
+				flashSuccess(state.message)
+			}
+
+			is BuildState.Error -> {
+				flashError(state.reason)
+			}
+
+			is BuildState.AwaitingInstall -> {
+				installApk(state)
+				buildViewModel.installationAttempted()
+			}
+
+			is BuildState.AwaitingPluginInstall -> {
+				showPluginInstallDialog(state.cgpFile)
+			}
+		}
+		// Refresh the toolbar icons (e.g., the run/stop button).
+		invalidateOptionsMenu()
+	}
+
+	private fun installApk(state: BuildState.AwaitingInstall) {
+		apkInstallationViewModel.installApk(
+			context = this,
+			apk = state.apkFile,
+			launchInDebugMode = state.launchInDebugMode,
+		)
+
+		if (state.launchProfilerAfterInstall) {
+			// The "Profile" action built a profileable APK and just launched it; surface the
+			// Profiler tab so the user can immediately profile the running app.
+			bottomSheetViewModel.setSheetState(
+				sheetState = BottomSheetBehavior.STATE_EXPANDED,
+				currentTab = BottomSheetViewModel.TAB_PROFILER,
+			)
+		}
+	}
+
+	private fun showPluginInstallDialog(cgpFile: File) {
+		if (!cgpFile.exists()) {
+			flashError(getString(string.msg_plugin_file_not_found))
+			buildViewModel.pluginInstallationAttempted()
+			return
+		}
+		val pluginName = cgpFile.nameWithoutExtension
+		newMaterialDialogBuilder(this)
+			.setTitle(string.title_install_plugin)
+			.setMessage(getString(string.msg_install_plugin_prompt, pluginName))
+			.setPositiveButton(string.btn_install) { dialog, _ ->
+				dialog.dismiss()
+				installPlugin(cgpFile)
+			}.setNegativeButton(string.btn_later) { dialog, _ ->
+				dialog.dismiss()
+				buildViewModel.pluginInstallationAttempted()
+			}.setOnCancelListener {
+				buildViewModel.pluginInstallationAttempted()
+			}.show()
+	}
+
+	private fun installPlugin(cgpFile: File) {
+		lifecycleScope.launch {
+			setStatus(getString(string.status_installing_plugin))
+			val result = pluginRepository.installPluginFromFile(cgpFile)
+			result
+				.onSuccess {
+					showRestartPrompt(this@ProjectHandlerActivity)
+				}.onFailure { error ->
+					flashError(
+						getString(
+							string.msg_plugin_install_failed,
+							error.message ?: "Unknown error",
+						),
+					)
+				}
+			setStatus("")
+			buildViewModel.pluginInstallationAttempted()
+		}
+	}
+
+	override fun onSaveInstanceState(outState: Bundle) {
+		super.onSaveInstanceState(outState)
+		outState.apply {
+			putBoolean(STATE_KEY_SHOULD_INITIALIZE, !editorViewModel.isInitializing)
+			putBoolean(STATE_KEY_FROM_SAVED_INSTANACE, true)
+		}
+	}
+
+	override fun onPause() {
+		super.onPause()
+		if (isDestroying) {
+			// reset these values here
+			// sometimes, when the IDE closed and reopened instantly, these values prevent initialization
+			// of the project
+			ProjectManagerImpl.getInstance().destroy()
+
+			editorViewModel.isInitializing = false
+			editorViewModel.isBuildInProgress = false
+		}
+	}
+
+	override fun onResume() {
+		super.onResume()
+
+		val service =
+			Lookup.getDefault().lookup(BuildService.KEY_BUILD_SERVICE) as? GradleBuildService
+		editorViewModel.isBuildInProgress = service?.isBuildInProgress == true
+		editorViewModel.isInitializing = initializingFuture?.isDone == false
+
+		invalidateOptionsMenu()
+	}
+
+	override fun preDestroy() {
+		syncNotificationFlashbar?.dismiss()
+		syncNotificationFlashbar = null
+
+		if (didCompleteLiveOnCreate && isDestroying) {
+			releaseServerListener()
+			this.initializingFuture?.cancel(true)
+			this.initializingFuture = null
+
+			doCloseAll()
+		}
+
+		if (didCompleteLiveOnCreate && IDELanguageClientImpl.isInitialized()) {
+			IDELanguageClientImpl.shutdown()
+		}
+
+		super.preDestroy()
+
+		if (didCompleteLiveOnCreate && isDestroying) {
+			try {
+				stopLanguageServers()
+			} catch (_: Exception) {
+				log.error("Failed to stop editor services.")
+			}
+
+			try {
+				unbindService(buildServiceConnection)
+				buildServiceConnection.onConnected = {}
+			} catch (_: Throwable) {
+				log.error("Unable to unbind service")
+			} finally {
+				Lookup.getDefault().apply {
+					(lookup(BuildService.KEY_BUILD_SERVICE) as? GradleBuildService?)
+						?.setEventListener(null)
+
+					unregister(BuildService.KEY_BUILD_SERVICE)
+				}
+
+				mBuildEventListener.release()
+				editorViewModel.isBoundToBuildSerice = false
+			}
+		}
+	}
+
+	fun setStatus(status: CharSequence) {
+		setStatus(status, Gravity.CENTER)
+	}
+
+	fun setStatus(
+		status: CharSequence,
+		@GravityInt gravity: Int,
+	) {
+		doSetStatus(status, gravity)
+	}
+
+	fun appendBuildOutput(str: String) {
+		if (_binding == null || isDestroyed || isFinishing) return
+		content.bottomSheet.appendBuildOut(str)
+	}
+
+	fun notifySyncNeeded() {
+		notifySyncNeeded { initializeProject(forceSync = true) }
+	}
+
+	private fun notifySyncNeeded(onConfirm: () -> Unit) {
+		val buildService = Lookup.getDefault().lookup(BuildService.KEY_BUILD_SERVICE)
+		if (buildService == null || editorViewModel.isInitializing || buildService.isBuildInProgress) return
+
+		activityScope.launch(Dispatchers.Main.immediate) {
+			syncNotificationFlashbar?.dismiss()
+			syncNotificationFlashbar =
+				flashbarBuilder(
+					duration = DURATION_INDEFINITE,
+					backgroundColor = resolveAttr(R.attr.colorSecondaryContainer),
+					messageColor = resolveAttr(R.attr.colorOnSecondaryContainer),
+				).withIcon(
+					R.drawable.ic_sync,
+					colorFilter = resolveAttr(R.attr.colorOnSecondaryContainer),
+				).message(string.msg_sync_needed)
+					.positiveActionText(string.btn_sync)
+					.positiveActionTapListener {
+						onConfirm()
+						it.dismiss()
+					}.negativeActionText(string.btn_ignore_changes)
+					.negativeActionTapListener(Flashbar::dismiss)
+					.build()
+
+			syncNotificationFlashbar?.showOnUiThread()
+		}
+	}
+
+	fun startServices() {
+		val service =
+			Lookup.getDefault().lookup(BuildService.KEY_BUILD_SERVICE) as GradleBuildService?
+		if (editorViewModel.isBoundToBuildSerice && service != null) {
+			log.info("Reusing already started Gradle build service")
+			onGradleBuildServiceConnected(service)
+			return
+		} else {
+			log.info("Binding to Gradle build service...")
+		}
+
+		buildServiceConnection.onConnected = this::onGradleBuildServiceConnected
+
+		if (
+			bindService(
+				Intent(this, GradleBuildService::class.java),
+				buildServiceConnection,
+				BIND_AUTO_CREATE or BIND_IMPORTANT,
+			)
+		) {
+			log.info("Bind request for Gradle build service was successful...")
+		} else {
+			log.error("Gradle build service doesn't exist or the IDE is not allowed to access it.")
+		}
+
+		lifecycleScope.launch {
+			initLspClient()
+		}
+	}
+
+	fun initializeProject(forceSync: Boolean = false) {
+		val currentVariants = buildVariantsViewModel._buildVariants.value
+
+		// no information about the build variants is available
+		// use the default variant selections
+		if (currentVariants == null) {
+			log.debug(
+				"No variant selection information available. " +
+					"Default build variants will be selected.",
+			)
+			initializeProject(buildVariants = emptyMap(), forceSync = forceSync)
+			return
+		}
+
+		// variant selection information is available
+		// but there are updated & unsaved variant selections
+		// use the updated variant selections to initialize the project
+		if (buildVariantsViewModel.updatedBuildVariants.isNotEmpty()) {
+			val newSelections = currentVariants.toMutableMap()
+			newSelections.putAll(buildVariantsViewModel.updatedBuildVariants)
+
+			val selectedVariants = newSelections.mapToSelectedVariants()
+			log.debug(
+				"Initializing project with new build variant selections: {}",
+				selectedVariants,
+			)
+
+			initializeProject(buildVariants = selectedVariants, forceSync = forceSync)
+			return
+		}
+
+		// variant selection information is available but no variant selections have been updated
+		// the user might be trying to sync the project from options menu
+		// initialize the project with the existing selected variants
+		val selectedVariants = currentVariants.mapToSelectedVariants()
+		log.debug("Re-initializing project with existing build variant selections")
+		initializeProject(buildVariants = selectedVariants, forceSync = forceSync)
+	}
+
+	private fun showToast(message: String) {
+		Toast.makeText(this@ProjectHandlerActivity, message, Toast.LENGTH_LONG).show()
+	}
+
+	private suspend fun handleMissingProjectDirectory(projectName: String) =
+		withContext(Dispatchers.Main) {
+			recentProjectsViewModel.deleteProject(projectName)
+			showToast(getString(string.msg_project_dir_doesnt_exist))
+
+			val intent =
+				Intent(this@ProjectHandlerActivity, MainActivity::class.java).apply {
+					addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+				}
+
+			startActivity(intent)
+			this@ProjectHandlerActivity.finish()
+		}
+
+	/**
+	 * Initialize (sync) the project.
+	 *
+	 * @param buildVariants A map of project paths to the selected build
+	 *    variants.
+	 */
+	fun initializeProject(
+		buildVariants: Map<String, String>,
+		forceSync: Boolean = false,
+	) = activityScope.launch {
+		val manager = ProjectManagerImpl.getInstance()
+		val projectDir = File(manager.projectPath)
+		if (!projectDir.exists()) {
+			log.error("GradleProject directory does not exist. Cannot initialize project")
+			handleMissingProjectDirectory(projectDir.name)
+			return@launch
+		}
+
+		val needsSync =
+			try {
+				forceSync || manager.isGradleSyncNeeded(projectDir)
+			} catch (e: Exception) {
+				when (e) {
+					is FileNotFoundException -> {
+						handleMissingProjectDirectory(projectDir.name)
+						return@launch
+					}
+
+					else -> {
+						throw e
+					}
+				}
+			}
+
+		withContext(Dispatchers.Main.immediate) {
+			preProjectInit()
+		}
+
+		val buildService =
+			Lookup.getDefault().lookup(BuildService.KEY_BUILD_SERVICE) as? GradleBuildService
+		if (buildService == null) {
+			log.error("No build service found. Cannot initialize project.")
+			// This init failed before postProjectInit could ever run, so its regardless-of-outcome
+			// drain never happens here -- without this, a deep link's pending file navigation stays
+			// armed on the intent and fires on the next unrelated successful sync or variant
+			// switch, the stale jump that drain exists to prevent. Same for the tooling-server
+			// check below. (The handleMissingProjectDirectory returns above don't need it: they
+			// finish() this instance, and the request dies with it.)
+			withContext(Dispatchers.Main.immediate) { drainPendingFileRequest() }
+			return@launch
+		}
+
+		if (!buildService.isToolingServerStarted()) {
+			flashError(string.msg_tooling_server_unavailable)
+			withContext(Dispatchers.Main.immediate) { drainPendingFileRequest() }
+			return@launch
+		}
+
+		log.info("Sending init request to tooling server (needs sync: {})...", needsSync)
+		initializingFuture =
+			buildService.initializeProject(
+				params =
+					createProjectInitParams(
+						projectDir = projectDir,
+						buildVariants = buildVariants,
+						needsGradleSync = needsSync,
+						buildId = buildService.nextBuildId(BuildRunType.ProjectSync),
+					),
+			)
+
+		initializingFuture!!.whenCompleteAsync { result, error ->
+			releaseServerListener()
+
+			if (result == null || !result.isSuccessful || error != null) {
+				if (!CancelChecker.isCancelled(error)) {
+					log.error("An error occurred initializing the project with Tooling API", error)
+				}
+
+				activityScope.launch(context = Dispatchers.Main) {
+					postProjectInit(isSuccessful = false, failure = result?.failure)
+				}
+				return@whenCompleteAsync
+			}
+
+			onProjectInitialized(result as InitializeResult.Success)
+		}
+	}
+
+	private fun createProjectInitParams(
+		projectDir: File,
+		buildVariants: Map<String, String>,
+		needsGradleSync: Boolean,
+		buildId: BuildId,
+	): InitializeProjectParams =
+		InitializeProjectParams(
+			directory = projectDir.absolutePath,
+			gradleDistribution = gradleDistributionParams,
+			androidParams = createAndroidParams(buildVariants),
+			needsGradleSync = needsGradleSync,
+			buildId = buildId,
+		)
+
+	private fun createAndroidParams(buildVariants: Map<String, String>): AndroidInitializationParams {
+		if (buildVariants.isEmpty()) {
+			return AndroidInitializationParams.DEFAULT
+		}
+
+		return AndroidInitializationParams(buildVariants)
+	}
+
+	private fun releaseServerListener() {
+		// Release reference to server listener in order to prevent memory leak
+		(Lookup.getDefault().lookup(BuildService.KEY_BUILD_SERVICE) as? GradleBuildService?)
+			?.setServerListener(null)
+	}
+
+	fun stopLanguageServers() {
+		try {
+			destroyLanguageServers(isChangingConfigurations)
+		} catch (err: Throwable) {
+			log.error("Unable to stop editor services. Please report this issue.", err)
+		}
+	}
+
+	/**
+	 * Re-adds the processes the service already knows about to this activity's memory watcher.
+	 *
+	 * A configuration change replaces the activity and its [MemoryUsageWatcher] but not the service
+	 * or the processes it is driving, and both pids are reported on one-shot callbacks that a
+	 * replacement listener has already missed -- the tooling server's on the start it did not
+	 * request, the daemon's on the build that spawned it. Without this the chart came back after a
+	 * rotation plotting the IDE alone, which is the smallest of the three.
+	 */
+	private fun readoptWatchedProcesses(service: GradleBuildService) {
+		val tooling = service.toolingServerPid
+		val daemon = service.gradleDaemonPid
+		if (tooling == null && daemon == null) {
+			return
+		}
+
+		logger.info("Re-adopting watched processes: tooling server {}, Gradle daemon {}", tooling, daemon)
+		tooling?.let { memoryUsageWatcher.watchProcess(it, PROC_GRADLE_TOOLING) }
+		daemon?.let { memoryUsageWatcher.watchProcess(it, PROC_GRADLE_DAEMON) }
+		resetMemUsageChart()
+	}
+
+	protected fun onGradleBuildServiceConnected(service: GradleBuildService) {
+		log.info("Connected to Gradle build service")
+
+		buildServiceConnection.onConnected = null
+		editorViewModel.isBoundToBuildSerice = true
+		Lookup.getDefault().update(BuildService.KEY_BUILD_SERVICE, service)
+		service.setEventListener(mBuildEventListener)
+		readoptWatchedProcesses(service)
+
+		if (service.isToolingServerStarted()) {
+			if (service.isBuildInProgress) {
+				log.info("Skipping project initialization while build is in progress")
+				// The third early return that never reaches postProjectInit, and so never reaches its
+				// drain -- the same reason initializeProject's two failure returns drain. Cold-opening a
+				// project by deep link while a Gradle build is already running otherwise left the
+				// PendingFileRequest armed on the intent: the editor never navigated (only a log line),
+				// and the request then fired on the first unrelated later sync, yanking the editor to
+				// that stale file and line.
+				lifecycleScope.launch(Dispatchers.Main.immediate) { drainPendingFileRequest() }
+				return
+			}
+			initializeProject()
+			return
+		}
+
+		service.startToolingServer { pid ->
+			memoryUsageWatcher.watchProcess(pid, PROC_GRADLE_TOOLING)
+			// The callback arrives on the tooling server's own thread, and the renderer is
+			// @UiThread: rebuild() clears and repopulates a non-thread-safe pid map that the
+			// once-a-second sample listener reads on the main thread, so racing it can plot one
+			// process's samples on another's line or throw out of the entry loop.
+			runOnUiThread { resetMemUsageChart() }
+
+			service.metadata().whenComplete { metadata, err ->
+				if (metadata == null || err != null) {
+					log.error("Failed to get tooling server metadata")
+					return@whenComplete
+				}
+
+				if (pid != metadata.pid) {
+					log.warn(
+						"Tooling server pid mismatch. Expected: {}, Actual: {}. Replacing memory watcher...",
+						pid,
+						metadata.pid,
+					)
+					memoryUsageWatcher.watchProcess(metadata.pid, PROC_GRADLE_TOOLING)
+					// A CompletableFuture completion thread, for the same reason as above.
+					runOnUiThread { resetMemUsageChart() }
+				}
+			}
+
+			initializeProject()
+		}
+	}
+
+	protected open fun onProjectInitialized(result: InitializeResult.Success) {
+		editorActivityScope.launch(Dispatchers.IO) {
+			val manager = ProjectManagerImpl.getInstance()
+			val gradleBuildResult = ProjectSyncHelper.readGradleBuild(result.cacheFile)
+			if (gradleBuildResult.isFailure) {
+				val error = gradleBuildResult.exceptionOrNull()
+				log.error("Failed to read project cache", error)
+
+				val isExpectedError = error.isFileNotFound
+
+				if (error != null && !isExpectedError) {
+					Sentry.captureException(error)
+				}
+
+				withContext(Dispatchers.Main) { postProjectInit(false, CACHE_READ_ERROR) }
+				return@launch
+			}
+
+			manager.setup(gradleBuildResult.getOrThrow())
+			manager.notifyProjectUpdate()
+			updateBuildVariants(manager.androidBuildVariants)
+
+			withContext(Dispatchers.Main) {
+				postProjectInit(isSuccessful = true, failure = null)
+			}
+		}
+	}
+
+	protected open fun preProjectInit() {
+		setStatus(getString(string.msg_initializing_project))
+		editorViewModel.isInitializing = true
+	}
+
+	protected open fun postProjectInit(
+		isSuccessful: Boolean,
+		failure: TaskExecutionResult.Failure?,
+	) {
+		val manager = ProjectManagerImpl.getInstance()
+		if (!isSuccessful) {
+			// Before the project name is resolved, which the cancel path does not use: that lookup
+			// walks the workspace model and has a catch-Throwable around it, and a user who pressed
+			// Stop should not be waiting on it -- or be affected by it failing.
+			//
+			// A sync the user stopped is not a failure, and arrives here through the same callback
+			// as one. ADFA-5542 fixed that for builds and missed this path, which is the one a
+			// cancelled *sync* takes: the user pressed Stop and got an indefinite red "Project
+			// initialization failed" for doing so.
+			if (failure == BUILD_CANCELLED) {
+				val cancelled = getString(string.info_build_cancelled)
+				setStatus(cancelled)
+				flashInfo(cancelled)
+				editorViewModel.isInitializing = false
+				return
+			}
+
+			// Get project name for error message
+			val projectName =
+				try {
+					val project = manager.workspace?.rootProject
+					if (project != null) {
+						project.name.takeIf { it.isNotEmpty() }
+							?: manager.projectDir.name
+					} else {
+						manager.projectDir.name
+					}
+				} catch (th: Throwable) {
+					manager.projectDir.name
+				}
+
+			val initFailed =
+				if (projectName.isNotEmpty()) {
+					getString(string.msg_project_initialization_failed_with_name, projectName)
+				} else {
+					getString(string.msg_project_initialization_failed)
+				}
+			setStatus(initFailed)
+
+			val msg =
+				when (failure) {
+					PROJECT_DIRECTORY_INACCESSIBLE -> string.msg_project_dir_inaccessible
+					PROJECT_NOT_DIRECTORY -> string.msg_file_is_not_dir
+					PROJECT_NOT_FOUND -> string.msg_project_dir_doesnt_exist
+					CACHE_READ_ERROR -> string.msg_project_cache_read_failure
+					else -> null
+				}?.let {
+					"$initFailed: ${getString(it)}"
+				}
+
+			flashError(msg ?: initFailed)
+
+			editorViewModel.isInitializing = false
+			return
+		}
+
+		initialSetup()
+		setStatus(getString(string.msg_project_initialized))
+		editorViewModel.isInitializing = false
+		invalidateOptionsMenu()
+
+		if (mFindInProjectDialog?.isShowing == true) {
+			mFindInProjectDialog!!.dismiss()
+		}
+
+		mFindInProjectDialog = null // Create the dialog again if needed
+	}
+
+	private fun updateBuildVariants(buildVariants: Map<String, BuildVariantInfo>) {
+		// avoid using the 'runOnUiThread' method defined in the activity
+		com.itsaky.androidide.tasks.runOnUiThread {
+			buildVariantsViewModel.buildVariants = buildVariants
+			buildVariantsViewModel.resetUpdatedSelections()
+		}
+	}
+
+	protected open fun createFindInProjectDialog(): AlertDialog? {
+		val manager = ProjectManagerImpl.getInstance()
+		if (manager.workspace == null) {
+			log.warn("No root project model found. Is the project initialized?")
+			flashError(getString(string.msg_project_not_initialized))
+			return null
+		}
+
+		val moduleDirs =
+			try {
+				manager.gradleBuild!!
+					.subProjectList
+					.stream()
+					.map { project -> project.projectDir }
+					.collect(Collectors.toList())
+			} catch (_: Throwable) {
+				flashError(getString(string.msg_no_modules))
+				emptyList()
+			}
+
+		return createFindInProjectDialog(moduleDirs)
+	}
+
+	protected open fun createFindInProjectDialog(moduleDirs: List<File>): AlertDialog? {
+		val srcDirs = mutableListOf<File>()
+		val binding = LayoutSearchProjectBinding.inflate(layoutInflater)
+		binding.modulesContainer.removeAllViews()
+
+		for (i in moduleDirs.indices) {
+			val module = moduleDirs[i]
+			val src = File(module, "src")
+
+			if (!module.exists() || !module.isDirectory || !src.exists() || !src.isDirectory) {
+				continue
+			}
+
+			val check = CheckBox(this)
+			check.text = module.name
+			check.isChecked = true
+
+			val params = MarginLayoutParams(-2, -2)
+			params.bottomMargin = dpToPx(4f)
+			binding.modulesContainer.addView(check, params)
+			srcDirs.add(src)
+		}
+
+		val builder = newMaterialDialogBuilder(this)
+		builder.setTitle(string.menu_find_project)
+		builder.setView(binding.root)
+		builder.setCancelable(false)
+		builder.setPositiveButton(string.menu_find) { dialog, _ ->
+			val text =
+				binding.input.editText!!
+					.text
+					.toString()
+					.trim()
+			if (text.isEmpty()) {
+				flashError(string.msg_empty_search_query)
+				return@setPositiveButton
+			}
+
+			val searchDirs = mutableListOf<File>()
+			for (i in 0 until binding.modulesContainer.childCount) {
+				val check = binding.modulesContainer.getChildAt(i) as CheckBox
+				if (check.isChecked) {
+					searchDirs.add(srcDirs[i])
+				}
+			}
+
+			val extensions =
+				binding.filter.editText!!
+					.text
+					.toString()
+					.trim()
+			val extensionList = mutableListOf<String>()
+			if (extensions.isNotEmpty()) {
+				if (extensions.contains("|")) {
+					for (
+					str in
+					extensions
+						.split(Pattern.quote("|").toRegex())
+						.dropLastWhile { it.isEmpty() }
+						.toTypedArray()
+					) {
+						val token = str.trim()
+						if (token.isEmpty()) {
+							continue
+						}
+						// Trim so a pipe-split token keeps no surrounding space; the file-name
+						// suffix test is endsWith(), which a stray " kt" would never satisfy.
+						extensionList.add(token)
+					}
+				} else {
+					extensionList.add(extensions)
+				}
+			}
+
+			if (searchDirs.isEmpty()) {
+				flashError(string.msg_select_search_modules)
+			} else {
+				dialog.dismiss()
+
+				getProgressSheet(string.msg_searching_project)?.apply {
+					show(supportFragmentManager, "search_in_project_progress")
+				}
+
+				RecursiveFileSearcher.searchRecursiveAsync(
+					text,
+					extensionList,
+					searchDirs,
+				) { results ->
+					val plugins = projectSearchPlugins()
+					// When the built-in search finds nothing but a plugin may still match, keep
+					// the progress indicator up until the plugin phase resolves.
+					handleSearchResults(results, dismissProgress = plugins.isEmpty() || results.isNotEmpty())
+					if (plugins.isNotEmpty()) {
+						requestPluginSearchSections(plugins, text, extensionList, searchDirs, results)
+					}
+				}
+			}
+		}
+
+		builder.setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
+		val dialog = builder.create()
+		dialog.onLongPress(includeEditTexts = true) { view ->
+			if (
+				view is EditText
+			) {
+				view.selectCurrentWord()
+				view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+				SearchFieldToolbar(view).show()
+				true
+			} else if (view === binding.input ||
+				view === binding.filter ||
+				view.parent === binding.input ||
+				view.parent === binding.filter
+			) {
+				true
+			} else {
+				TooltipManager.showIdeCategoryTooltip(
+					context = this,
+					anchorView = binding.root,
+					tag = TooltipTag.DIALOG_FIND_IN_PROJECT,
+				)
+				true
+			}
+		}
+
+		mFindInProjectDialog = dialog
+		return mFindInProjectDialog
+	}
+
+	private fun projectSearchPlugins(): List<ProjectSearchExtension> =
+		IDEApplication
+			.getPluginManager()
+			?.getAllPluginInstances()
+			?.filterIsInstance<ProjectSearchExtension>()
+			?: emptyList()
+
+	private fun requestPluginSearchSections(
+		plugins: List<ProjectSearchExtension>,
+		query: String,
+		extensions: List<String>,
+		searchDirs: List<File>,
+		exactResults: Map<File, List<SearchResult>>,
+	) {
+		val pluginManager = IDEApplication.getPluginManager() ?: return
+
+		// handleSearchResults() just published the built-in results and bumped the generation;
+		// capture it so a superseding search invalidates this fan-out's late results.
+		val generation = editorViewModel.currentSearchGeneration
+		val request =
+			ProjectSearchRequest(
+				query = query,
+				roots = searchDirs,
+				extensions = extensions,
+			)
+		// searchProject() is contractually called on the UI thread; launch the futures here.
+		val futures =
+			plugins.mapNotNull { plugin ->
+				val pluginId =
+					pluginManager.getPluginIdForInstance(plugin as com.itsaky.androidide.plugins.IPlugin)
+						?: plugin.javaClass.name
+				try {
+					plugin
+						.searchProject(request)
+						.exceptionally { error ->
+							logger.warn("Project search plugin '{}' failed", pluginId, error)
+							// Runs on whatever thread completed the future; recordPluginCrash may
+							// force-disable the plugin, which mutates UI (tabs, sidebar).
+							runOnUiThread { pluginManager.recordPluginCrash(pluginId) }
+							emptyList()
+						}
+				} catch (error: Exception) {
+					logger.warn("Project search plugin '{}' failed", pluginId, error)
+					pluginManager.recordPluginCrash(pluginId)
+					null
+				}
+			}
+		if (futures.isEmpty()) {
+			doDismissSearchProgress()
+			return
+		}
+
+		// lifecycleScope cancels on destroy, so a slow plugin cannot pin this Activity/ViewModel
+		// or post to a dead Activity; await() suspends instead of blocking a commonPool worker.
+		lifecycleScope.launch {
+			val pluginSections =
+				withContext(Dispatchers.Default) {
+					try {
+						withTimeoutOrNull(TimeUnit.SECONDS.toMillis(PLUGIN_SEARCH_TIMEOUT_SECONDS)) {
+							CompletableFuture.allOf(*futures.toTypedArray()).await()
+						}
+						futures
+							// getNow() skips futures still pending after the timeout; orEmpty()
+							// guards a Java plugin completing with a null list.
+							.flatMap { future -> future.getNow(emptyList()).orEmpty() }
+							.mapNotNull { section -> section?.toSearchResultSection() }
+					} catch (cancellation: CancellationException) {
+						throw cancellation
+					} catch (error: Exception) {
+						logger.warn("Failed to collect project search plugin results", error)
+						emptyList()
+					}
+				}
+			val sections =
+				buildList {
+					if (exactResults.isNotEmpty()) {
+						add(SearchResultSection(title = null, results = exactResults))
+					}
+					addAll(pluginSections)
+				}
+			editorViewModel.onSearchResultSectionsReady(generation, sections)
+			doDismissSearchProgress()
+		}
+	}
+
+	private fun ProjectSearchSection.toSearchResultSection(): SearchResultSection? {
+		val grouped =
+			results
+				// mapNotNull guards a Java plugin returning null elements; a bare map() would
+				// NPE in toSearchResult() and take down the whole fan-out.
+				.mapNotNull { it?.toSearchResult() }
+				.groupBy { it.file }
+		return grouped
+			.takeIf { it.isNotEmpty() }
+			?.let { SearchResultSection(title = title, results = it) }
+	}
+
+	private fun ProjectSearchResult.toSearchResult(): SearchResult {
+		val range =
+			Range(
+				Position(startLine, startColumn),
+				Position(endLine, endColumn),
+			)
+		return SearchResult(range, file, linePreview, matchText)
+	}
+
+	fun EditText.selectCurrentWord() {
+		val content = text ?: return
+		if (content.isEmpty()) return
+
+		val currentStart = selectionStart
+		val currentEnd = selectionEnd
+
+		if (currentStart < 0 || currentEnd > content.length || currentStart != currentEnd) {
+			return
+		}
+
+		val range = ICUUtils.getWordRange(content, currentStart, true)
+		val newStart = IntPair.getFirst(range)
+		val newEnd = IntPair.getSecond(range)
+
+		val isValidRange =
+			newStart >= 0 &&
+				newEnd <= content.length &&
+				newStart <= newEnd
+
+		if (isValidRange && newStart != newEnd) {
+			setSelection(newStart, newEnd)
+		}
+	}
+
+	private fun initialSetup() {
+		val manager = ProjectManagerImpl.getInstance()
+		try {
+			val project = manager.workspace?.rootProject
+			if (project == null) {
+				log.warn("GradleProject not initialized. Skipping initial setup...")
+				return
+			}
+
+			var projectName = project.name
+			if (projectName.isEmpty()) {
+				projectName = manager.projectDir.name
+			}
+
+			supportActionBar!!.subtitle = projectName
+		} catch (_: Throwable) {
+			// ignored
+		}
+	}
+
+	private fun openHelpActivity() {
+		val intent = Intent(this, HelpActivity::class.java)
+		intent.putExtra(CONTENT_KEY, getString(string.docs_url))
+		startActivity(intent)
+	}
+
+	private suspend fun initLspClient() {
+		if (!IDELanguageClientImpl.isInitialized()) {
+			IDELanguageClientImpl.initialize(this as EditorHandlerActivity)
+		}
+
+		connectClient(IDELanguageClientImpl.getInstance())
+
+		val results =
+			try {
+				connectDebugClient(debuggerViewModel.debugClient).values
+			} catch (e: Exception) {
+				if (e is CancellationException) {
+					throw e
+				}
+
+				Sentry.captureException(e)
+				logger.error("Unable to connect LSP servers with debug client", e)
+				listOf(DebugClientConnectionResult.Failure(cause = e))
+			}
+
+		if (results.any { it is DebugClientConnectionResult.Failure }) {
+			// one or more debug adapters failed to initialize
+			val message =
+				buildString {
+					results.filterIsInstance<DebugClientConnectionResult.Failure>().forEach { result ->
+						val msg =
+							result.contextRes?.let(::getString)
+								?: result.context
+								?: (result.cause as? SocketException?).let { err ->
+									val msg = err?.message ?: ""
+									when {
+										msg.contains("EPERM") -> getString(string.debugger_error_errno_eperm)
+										msg.contains("ECONNREFUSED") -> getString(string.debugger_error_errno_econnrefused)
+										else -> null
+									}
+								}
+								?: (result.cause as? ErrnoException? ?: result.cause?.cause as? ErrnoException?)?.let { err ->
+									when (err.errno) {
+										OsConstants.EPERM -> getString(string.debugger_error_errno_eperm)
+										OsConstants.ECONNREFUSED -> getString(string.debugger_error_errno_econnrefused)
+										else -> getString(R.string.debugger_error_errno, err.errno)
+									}
+								}
+								?: getString(R.string.debugger_error_debugger_startup_failure)
+
+						append(msg)
+						append(System.lineSeparator())
+					}
+
+					if (isNotBlank()) {
+						append(System.lineSeparator())
+					}
+
+					append(getString(R.string.debugger_error_suggestion_network_restriction))
+				}
+
+			withContext(Dispatchers.Main) {
+				newMaterialDialogBuilder(this@ProjectHandlerActivity)
+					.setTitle(R.string.debugger_error_network_access_error)
+					.setMessage(message)
+					.setPositiveButton(android.R.string.ok, null)
+					.show()
+			}
+		}
+	}
+
+	open fun getProgressSheet(msg: Int): ProgressSheet? {
+		doDismissSearchProgress()
+
+		mSearchingProgress =
+			ProgressSheet().also {
+				it.isCancelable = false
+				it.setMessage(getString(msg))
+				it.setSubMessageEnabled(false)
+			}
+
+		return mSearchingProgress
+	}
+}
