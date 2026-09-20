@@ -1043,18 +1043,38 @@ class PluginManager private constructor(
 		error: Throwable,
 	) {
 		logger.error("Failed to load plugin from ${pluginFile.name}", error)
-		val id = loadAndValidate(pluginFile).getOrNull()?.first?.id ?: pluginFile.nameWithoutExtension
+		val parsedId = PluginLoader(context, pluginFile).getPluginMetadata()?.id
+		val id = parsedId?.takeIf(PluginIdValidator::isValid) ?: pluginFile.nameWithoutExtension
 		loadFailures[id] = error.message ?: error.toString()
 	}
 
-	fun getAllPlugins(): List<PluginInfo> =
-		loadedPlugins.values.map { loadedPlugin ->
-			PluginInfo(
-				metadata = loadedPlugin.toPluginMetadata(),
-				isEnabled = loadedPlugin.isEnabled,
-				isLoaded = true,
-			)
-		}
+	fun getAllPlugins(): List<PluginInfo> {
+		val loaded =
+			loadedPlugins.values.associate { loadedPlugin ->
+				loadedPlugin.manifest.id to
+					PluginInfo(
+						metadata = loadedPlugin.toPluginMetadata(),
+						isEnabled = loadedPlugin.isEnabled,
+						isLoaded = true,
+					)
+			}.toMutableMap()
+		pluginsDir
+			.listFiles { file ->
+				file.isFile && file.name.endsWith(".$PLUGIN_ARCHIVE_EXTENSION", ignoreCase = true)
+			}.orEmpty()
+			.forEach { file ->
+				val manifest = PluginLoader(context, file).getPluginMetadata() ?: return@forEach
+				if (!securityManager.validatePlugin(file, manifest) || manifest.id in loaded) return@forEach
+				loaded[manifest.id] =
+					PluginInfo(
+						metadata = manifest.toPluginMetadata(),
+						isEnabled = pluginStates[manifest.id] ?: true,
+						isLoaded = false,
+						loadError = loadFailures[manifest.id],
+					)
+			}
+		return loaded.values.sortedBy { it.metadata.id }
+	}
 
 	/**
 	 * Get all enabled plugin instances for UI integration
