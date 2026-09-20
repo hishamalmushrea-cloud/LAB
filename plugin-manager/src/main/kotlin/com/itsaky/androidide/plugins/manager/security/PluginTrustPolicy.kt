@@ -32,7 +32,7 @@ object PluginTrustPolicy {
 		require(signerDigests.isNotEmpty()) { "Plugin $pluginId is unsigned" }
 		when {
 			existingPluginDigests.isNotEmpty() && signerDigests == existingPluginDigests -> return
-			signerDigests.any { it in trustedPublisherDigests } -> return
+			trustedPublisherDigests.isNotEmpty() && signerDigests == trustedPublisherDigests -> return
 			isAlreadyInstalled -> return
 			else -> throw SecurityException("Plugin $pluginId is not signed by a trusted publisher")
 		}

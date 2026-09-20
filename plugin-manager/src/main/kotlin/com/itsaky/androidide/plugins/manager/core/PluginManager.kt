@@ -96,6 +96,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.adfa.constants.PLUGIN_ARCHIVE_EXTENSION
 import java.io.File
+import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
 
 class PluginManager private constructor(
@@ -903,9 +904,7 @@ class PluginManager private constructor(
 			// Drop lifecycle listeners this plugin registered; its classloader is going away.
 			lifecycleDispatcher.removeAllFrom(pluginId)
 
-			File(context.getDir("plugin_native_libs", Context.MODE_PRIVATE), pluginId).let { dir ->
-				if (dir.exists()) dir.deleteRecursively()
-			}
+			deleteExactPluginDirectory(context.getDir("plugin_native_libs", Context.MODE_PRIVATE), pluginId)
 
 			logger.info("Unloaded plugin: $pluginId")
 			return true
@@ -1229,6 +1228,11 @@ class PluginManager private constructor(
 	}
 
 	fun forceDisablePlugin(pluginId: String) {
+		PluginIdValidator.requireValid(pluginId)
+		loadedPlugins.values
+			.filter { it.isEnabled && pluginId in it.manifest.dependencies }
+			.map { it.manifest.id }
+			.forEach(::forceDisablePlugin)
 		val loadedPlugin = loadedPlugins[pluginId] ?: return
 		cleanupSidebarActions(pluginId)
 		runCatching { PluginEditorTabManager.getInstance().removePluginTabs(pluginId) }.onFailure { e ->
@@ -1909,29 +1913,36 @@ class PluginManager private constructor(
 		)
 	}
 
-	/**
-	 * Clean up ALL plugin files and cache directories
-	 */
+	/** Clean up only the three exact per-plugin data directories. */
 	private fun cleanupPluginCacheFiles(pluginId: String) {
 		executeWithErrorHandling("cleanup plugin cache files", pluginId) {
-			logger.debug("Cleaning up ALL files and cache for plugin: $pluginId")
+			PluginIdValidator.requireValid(pluginId)
+			deleteExactPluginDirectory(pluginsDir, pluginId)
+			deleteExactPluginDirectory(context.getDir("plugin_native_libs", Context.MODE_PRIVATE), pluginId)
+			deleteExactPluginDirectory(context.getDir("plugin_icons", Context.MODE_PRIVATE), pluginId)
+			logger.debug("Exact plugin directory cleanup finished for: $pluginId")
+		}
+	}
 
-			val pluginDir = File(pluginsDir, pluginId)
-			if (pluginDir.exists()) {
-				val deleted = pluginDir.deleteRecursively()
-				logger.debug("Deleted plugin directory: ${pluginDir.absolutePath} (success: $deleted)")
+	private fun deleteExactPluginDirectory(
+		root: File,
+		pluginId: String,
+	) {
+		PluginIdValidator.requireValid(pluginId)
+		val candidate = File(root, pluginId)
+		if (Files.isSymbolicLink(candidate.toPath())) {
+			check(candidate.delete()) { "Could not remove plugin storage symlink: $candidate" }
+			return
+		}
+		val canonicalRoot = root.canonicalFile
+		val canonicalCandidate = candidate.canonicalFile
+		check(canonicalCandidate.parentFile == canonicalRoot) {
+			"Plugin storage directory escaped its root: $candidate"
+		}
+		if (canonicalCandidate.exists()) {
+			check(canonicalCandidate.deleteRecursively()) {
+				"Could not delete plugin storage directory: $canonicalCandidate"
 			}
-
-			File(context.getDir("plugin_native_libs", Context.MODE_PRIVATE), pluginId).let { dir ->
-				if (dir.exists()) dir.deleteRecursively()
-			}
-
-			File(context.getDir("plugin_icons", Context.MODE_PRIVATE), pluginId).let { dir ->
-				if (dir.exists()) dir.deleteRecursively()
-			}
-
-
-			logger.debug("Complete plugin cleanup finished for: $pluginId")
 		}
 	}
 

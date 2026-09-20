@@ -67,6 +67,7 @@ class AtomicPluginInstaller(
 		PluginIdValidator.requireValid(pluginId)
 		require(source.isFile && source.canRead()) { "Plugin source is not readable: $source" }
 		require(pluginsDir.exists() || pluginsDir.mkdirs()) { "Could not create $pluginsDir" }
+		requireSafeTransactionDirectory(pluginsDir, transactionsDir)
 		recoverInterruptedTransactionsLocked(pluginsDir)
 		require(transactionsDir.exists() || transactionsDir.mkdirs()) { "Could not create $transactionsDir" }
 
@@ -199,6 +200,7 @@ class AtomicPluginInstaller(
 
 		private fun recoverInterruptedTransactionsLocked(pluginsDir: File) {
 			val transactions = File(pluginsDir, TRANSACTION_DIRECTORY)
+			requireSafeTransactionDirectory(pluginsDir, transactions)
 			if (!transactions.isDirectory) return
 
 			transactions.listFiles { file -> file.name.endsWith(MARKER_SUFFIX) }.orEmpty().forEach { marker ->
@@ -259,6 +261,18 @@ class AtomicPluginInstaller(
 				Files.move(source.toPath(), destination.toPath(), ATOMIC_MOVE, REPLACE_EXISTING)
 			} catch (_: AtomicMoveNotSupportedException) {
 				Files.move(source.toPath(), destination.toPath(), REPLACE_EXISTING)
+			}
+		}
+
+		private fun requireSafeTransactionDirectory(
+			pluginsDir: File,
+			transactions: File,
+		) {
+			if (Files.isSymbolicLink(transactions.toPath())) {
+				throw SecurityException("Plugin transaction directory must not be a symbolic link")
+			}
+			if (transactions.canonicalFile.parentFile != pluginsDir.canonicalFile) {
+				throw SecurityException("Plugin transaction directory escaped plugin storage")
 			}
 		}
 

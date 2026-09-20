@@ -22,6 +22,7 @@ import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.nio.file.Files
 
 class ResourceManagerImplTest {
 	@get:Rule
@@ -47,6 +48,21 @@ class ResourceManagerImplTest {
 		}
 		assertThrows(SecurityException::class.java) {
 			manager().getPluginFile("../../org.example.plugin-escape/file.txt")
+		}
+	}
+
+	@Test
+	fun `rejects a plugin directory symlink that escapes storage`() {
+		val plugins = temporaryFolder.newFolder("plugins")
+		val outside = temporaryFolder.newFolder("outside")
+		Files.createSymbolicLink(plugins.toPath().resolve("org.example.plugin"), outside.toPath())
+
+		assertThrows(SecurityException::class.java) {
+			ResourceManagerImpl(
+				pluginId = "org.example.plugin",
+				pluginsDir = plugins,
+				classLoader = javaClass.classLoader!!,
+			)
 		}
 	}
 

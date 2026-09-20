@@ -106,14 +106,35 @@ jobs:
           "$SDKMANAGER" 'ndk;29.0.14206865' 'cmake;3.22.1'
 
       - name: Test plugin hardening and compile its app integration
-        run: >-
-          ./gradlew
-          :plugin-manager:testV8DebugUnitTest
-          :app:compileV8DebugKotlin
-          --stacktrace --no-daemon
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! ./gradlew \
+            :plugin-manager:testV8DebugUnitTest \
+            :app:compileV8DebugKotlin \
+            --stacktrace --no-daemon 2>&1 | tee gradle-verification.log; then
+            {
+              echo '## Gradle verification failure'
+              echo '```text'
+              tail -n 400 gradle-verification.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Check source formatting
-        run: ./gradlew spotlessCheck --stacktrace --no-daemon
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! ./gradlew spotlessCheck --stacktrace --no-daemon 2>&1 | tee spotless.log; then
+            {
+              echo '## Spotless failure'
+              echo '```text'
+              tail -n 300 spotless.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
   check_changes:
     # Upstream automation is opt-in in transferred/forked repositories.

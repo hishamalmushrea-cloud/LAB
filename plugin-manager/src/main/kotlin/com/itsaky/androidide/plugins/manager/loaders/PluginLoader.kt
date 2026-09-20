@@ -7,9 +7,11 @@ import android.content.pm.PackageManager
 import android.content.res.AssetManager
 import android.content.res.Resources
 import android.os.Build
+import com.itsaky.androidide.plugins.manager.security.PluginIdValidator
 import dalvik.system.DexClassLoader
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.zip.ZipFile
 
@@ -149,7 +151,7 @@ class PluginLoader(
 	}
 
 	fun extractNativeLibs(pluginId: String): File? {
-		val pluginNativeDir = File(context.getDir("plugin_native_libs", Context.MODE_PRIVATE), pluginId)
+		val pluginNativeDir = securePluginDirectory(context.getDir("plugin_native_libs", Context.MODE_PRIVATE), pluginId)
 		if (pluginNativeDir.exists()) {
 			nativeLibDir = pluginNativeDir
 			return pluginNativeDir
@@ -188,6 +190,23 @@ class PluginLoader(
 		return pluginNativeDir
 	}
 
+	private fun securePluginDirectory(
+		root: File,
+		pluginId: String,
+	): File {
+		PluginIdValidator.requireValid(pluginId)
+		val candidate = File(root, pluginId)
+		if (Files.isSymbolicLink(candidate.toPath())) {
+			throw SecurityException("Plugin storage directory must not be a symbolic link")
+		}
+		val canonicalRoot = root.canonicalFile
+		val canonicalCandidate = candidate.canonicalFile
+		if (canonicalCandidate.parentFile != canonicalRoot) {
+			throw SecurityException("Plugin storage directory escaped its root")
+		}
+		return canonicalCandidate
+	}
+
 	fun isDebuggable(): Boolean {
 		val packageInfo =
 			pluginPackageInfo
@@ -212,7 +231,7 @@ class PluginLoader(
 		manifest: PluginManifest,
 	): Pair<String?, String?> {
 		if (manifest.iconDay == null && manifest.iconNight == null) return null to null
-		val iconDir = File(context.getDir("plugin_icons", Context.MODE_PRIVATE), pluginId)
+		val iconDir = securePluginDirectory(context.getDir("plugin_icons", Context.MODE_PRIVATE), pluginId)
 		iconDir.deleteRecursively()
 		iconDir.mkdirs()
 		val targetPath = iconDir.toPath().toAbsolutePath().normalize()
@@ -335,7 +354,7 @@ class PluginLoader(
 				.map { signature ->
 					MessageDigest.getInstance("SHA-256")
 						.digest(signature.toByteArray())
-						.joinToString("") { byte -> "%02x".format(byte) }
+						.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
 				}.toSet()
 		} catch (e: Exception) {
 			log.warn("Failed to extract signer certificates from {}", pluginApk.absolutePath, e)

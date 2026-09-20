@@ -221,7 +221,15 @@ class ResourceManagerImpl(
     private val assetManager: AssetManager? = null
 ) : ResourceManager {
 
-    private val pluginDirectory = File(pluginsDir, PluginIdValidator.requireValid(pluginId))
+    private val canonicalPluginsDir = pluginsDir.canonicalFile
+    private val pluginDirectory =
+        File(canonicalPluginsDir, PluginIdValidator.requireValid(pluginId)).canonicalFile.also { directory ->
+            val root = canonicalPluginsDir.toPath()
+            val target = directory.toPath()
+            if (!target.startsWith(root) || target.parent != root) {
+                throw SecurityException("Plugin directory escaped the plugin storage root")
+            }
+        }
 
     init {
         if (!pluginDirectory.exists() && !pluginDirectory.mkdirs()) {

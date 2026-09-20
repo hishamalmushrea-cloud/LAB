@@ -23,6 +23,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.nio.file.Files
 
 class AtomicPluginInstallerTest {
 	@get:Rule
@@ -72,6 +73,28 @@ class AtomicPluginInstallerTest {
 	}
 
 	@Test
+	fun `unload failure keeps and reloads previous package`() {
+		val old = installed("old")
+		var reloaded = false
+		assertThrows(IllegalStateException::class.java) {
+			installer().install(
+				pluginId,
+				source("new"),
+				old,
+				validateStaged = {},
+				unloadCurrent = { throw IllegalStateException("unload failed") },
+				loadReplacement = { Result.success(Unit) },
+				reloadPrevious = {
+					reloaded = true
+					Result.success(Unit)
+				},
+			)
+		}
+		assertThat(installedFile().readText()).isEqualTo("old")
+		assertThat(reloaded).isTrue()
+	}
+
+	@Test
 	fun `load failure atomically restores and reloads previous package`() {
 		val old = installed("old")
 		val reloaded = mutableListOf<String>()
@@ -108,6 +131,25 @@ class AtomicPluginInstallerTest {
 		)
 		assertThat(backupExisted).isTrue()
 		assertThat(installedFile().readText()).isEqualTo("new")
+	}
+
+	@Test
+	fun `rejects a transaction directory symlink`() {
+		val outside = temporaryFolder.newFolder("outside-transactions")
+		Files.createSymbolicLink(File(pluginsDir(), ".transactions").toPath(), outside.toPath())
+
+		assertThrows(SecurityException::class.java) {
+			installer().install(
+				pluginId,
+				source("new"),
+				null,
+				validateStaged = {},
+				unloadCurrent = {},
+				loadReplacement = { Result.success(Unit) },
+				reloadPrevious = { Result.success(Unit) },
+			)
+		}
+		assertThat(outside.listFiles().orEmpty()).isEmpty()
 	}
 
 	@Test

@@ -36,6 +36,13 @@ class PluginTrustPolicyTest {
 	}
 
 	@Test
+	fun `publisher trust requires the complete signer set`() {
+		assertThrows(SecurityException::class.java) {
+			PluginTrustPolicy.requireTrusted(pluginId, setOf("host", "extra"), setOf("host"))
+		}
+	}
+
+	@Test
 	fun `updates require complete signer continuity`() {
 		assertThrows(SecurityException::class.java) {
 			PluginTrustPolicy.requireTrusted(
