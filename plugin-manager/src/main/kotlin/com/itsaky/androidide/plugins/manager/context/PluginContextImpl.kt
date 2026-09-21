@@ -27,14 +27,15 @@ class PluginContextImpl(
 	override val pluginId: String,
 	private val sharedServices: SharedServiceRegistry? = null,
 	private val pluginInfoProvider: ((String) -> PluginInfo?)? = null,
-	private val lifecycleDispatcher: PluginLifecycleDispatcher? = null
+	private val lifecycleDispatcher: PluginLifecycleDispatcher? = null,
 ) : PluginContext {
-
 	// Cross-plugin services are scoped by the provider's pluginId: a plugin publishes under its
 	// own id (this.pluginId) and can only read/remove its own, while getPluginService() honours
 	// the requested provider id instead of matching any registration of the same type.
-	override fun <T> getPluginService(pluginId: String, serviceClass: Class<T>): T? =
-		sharedServices?.get(pluginId, serviceClass)
+	override fun <T> getPluginService(
+		pluginId: String,
+		serviceClass: Class<T>,
+	): T? = sharedServices?.get(pluginId, serviceClass)
 
 	override fun isPluginActive(pluginId: String): Boolean {
 		val pluginInfo = pluginInfoProvider?.invoke(pluginId)
@@ -46,7 +47,10 @@ class PluginContextImpl(
 		return pluginInfo?.metadata?.version
 	}
 
-	override fun <T> registerService(serviceClass: Class<T>, serviceImpl: T) {
+	override fun <T> registerService(
+		serviceClass: Class<T>,
+		serviceImpl: T,
+	) {
 		sharedServices?.register(pluginId, serviceClass, serviceImpl as Any)
 	}
 
@@ -54,34 +58,27 @@ class PluginContextImpl(
 		sharedServices?.unregister(pluginId, serviceClass)
 	}
 
-	override fun getProvidedServices(): List<String> =
-		sharedServices?.providedBy(pluginId) ?: emptyList()
+	override fun getProvidedServices(): List<String> = sharedServices?.providedBy(pluginId) ?: emptyList()
 
 	override fun getPluginDataDir(): File {
 		// Return plugin's data directory (already exists via ResourceManager)
 		return resources.getPluginDirectory()
 	}
 
-	override fun getAppFilesDir(): File {
-		return androidContext.filesDir
-	}
+	override fun getAppFilesDir(): File = androidContext.filesDir
 
-	override fun getPluginFilesDir(): File {
-		return File(androidContext.filesDir, "plugins/$pluginId").apply { mkdirs() }
-	}
+	override fun getPluginFilesDir(): File = File(androidContext.filesDir, "plugins/$pluginId").apply { mkdirs() }
 
-	override fun getAppSharedPreferences(prefsName: String): SharedPreferences? {
-		return try {
+	override fun getAppSharedPreferences(prefsName: String): SharedPreferences? =
+		try {
 			androidContext.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 		} catch (e: Exception) {
 			logger.error("Failed to access app SharedPreferences: $prefsName", e)
 			null
 		}
-	}
 
-	override fun getPluginSharedPreferences(prefsName: String): SharedPreferences {
-		return androidContext.getSharedPreferences("plugin_${pluginId}_${prefsName}", Context.MODE_PRIVATE)
-	}
+	override fun getPluginSharedPreferences(prefsName: String): SharedPreferences =
+		androidContext.getSharedPreferences("plugin_${pluginId}_$prefsName", Context.MODE_PRIVATE)
 
 	override fun addPluginLifecycleListener(listener: PluginLifecycleListener) {
 		lifecycleDispatcher?.addListener(pluginId, listener)
@@ -102,11 +99,17 @@ class PluginContextImpl(
 class PluginLifecycleDispatcher {
 	private val listenersByOwner = ConcurrentHashMap<String, CopyOnWriteArraySet<PluginLifecycleListener>>()
 
-	fun addListener(ownerPluginId: String, listener: PluginLifecycleListener) {
+	fun addListener(
+		ownerPluginId: String,
+		listener: PluginLifecycleListener,
+	) {
 		listenersByOwner.computeIfAbsent(ownerPluginId) { CopyOnWriteArraySet() }.add(listener)
 	}
 
-	fun removeListener(ownerPluginId: String, listener: PluginLifecycleListener) {
+	fun removeListener(
+		ownerPluginId: String,
+		listener: PluginLifecycleListener,
+	) {
 		listenersByOwner[ownerPluginId]?.remove(listener)
 	}
 
@@ -115,16 +118,17 @@ class PluginLifecycleDispatcher {
 		listenersByOwner.remove(ownerPluginId)
 	}
 
-	fun notifyActivated(pluginId: String) =
-		dispatch("onPluginActivated", pluginId) { it.onPluginActivated(pluginId) }
+	fun notifyActivated(pluginId: String) = dispatch("onPluginActivated", pluginId) { it.onPluginActivated(pluginId) }
 
-	fun notifyDeactivated(pluginId: String) =
-		dispatch("onPluginDeactivated", pluginId) { it.onPluginDeactivated(pluginId) }
+	fun notifyDeactivated(pluginId: String) = dispatch("onPluginDeactivated", pluginId) { it.onPluginDeactivated(pluginId) }
 
-	fun notifyUninstalled(pluginId: String) =
-		dispatch("onPluginUninstalled", pluginId) { it.onPluginUninstalled(pluginId) }
+	fun notifyUninstalled(pluginId: String) = dispatch("onPluginUninstalled", pluginId) { it.onPluginUninstalled(pluginId) }
 
-	private fun dispatch(event: String, pluginId: String, action: (PluginLifecycleListener) -> Unit) {
+	private fun dispatch(
+		event: String,
+		pluginId: String,
+		action: (PluginLifecycleListener) -> Unit,
+	) {
 		listenersByOwner.values.forEach { listeners ->
 			listeners.forEach { listener ->
 				try {
@@ -147,7 +151,10 @@ class ServiceRegistryImpl : ServiceRegistry {
 	// loaded by different classloaders creates different Class objects
 	private val services = ConcurrentHashMap<String, MutableList<Any>>()
 
-	override fun <T> register(serviceClass: Class<T>, implementation: T) {
+	override fun <T> register(
+		serviceClass: Class<T>,
+		implementation: T,
+	) {
 		val key = serviceClass.name
 		services.computeIfAbsent(key) { mutableListOf() }.add(implementation as Any)
 	}
@@ -182,42 +189,53 @@ class SharedServiceRegistry {
 	// providerPluginId -> (serviceClassName -> implementation)
 	private val byProvider = ConcurrentHashMap<String, ConcurrentHashMap<String, Any>>()
 
-	fun register(providerId: String, serviceClass: Class<*>, implementation: Any) {
+	fun register(
+		providerId: String,
+		serviceClass: Class<*>,
+		implementation: Any,
+	) {
 		byProvider.computeIfAbsent(providerId) { ConcurrentHashMap() }[serviceClass.name] = implementation
 	}
 
-	fun unregister(providerId: String, serviceClass: Class<*>) {
+	fun unregister(
+		providerId: String,
+		serviceClass: Class<*>,
+	) {
 		byProvider[providerId]?.remove(serviceClass.name)
 	}
 
 	@Suppress("UNCHECKED_CAST")
-	fun <T> get(providerId: String, serviceClass: Class<T>): T? =
-		byProvider[providerId]?.get(serviceClass.name) as? T
+	fun <T> get(
+		providerId: String,
+		serviceClass: Class<T>,
+	): T? = byProvider[providerId]?.get(serviceClass.name) as? T
 
 	/** Class names of every service the given provider currently publishes. */
-	fun providedBy(providerId: String): List<String> =
-		byProvider[providerId]?.keys?.toList() ?: emptyList()
+	fun providedBy(providerId: String): List<String> = byProvider[providerId]?.keys?.toList() ?: emptyList()
 
 	/**
 	 * A legacy class-keyed [ServiceRegistry] view backed by this store but pinned to a single
 	 * [providerId]. Backs [PluginManager.getServiceRegistry] so existing callers keep a working,
 	 * provider-scoped registry instead of the old cross-plugin-global one.
 	 */
-	fun asRegistry(providerId: String): ServiceRegistry = object : ServiceRegistry {
-		override fun <T> register(serviceClass: Class<T>, implementation: T) {
-			this@SharedServiceRegistry.register(providerId, serviceClass, implementation as Any)
+	fun asRegistry(providerId: String): ServiceRegistry =
+		object : ServiceRegistry {
+			override fun <T> register(
+				serviceClass: Class<T>,
+				implementation: T,
+			) {
+				this@SharedServiceRegistry.register(providerId, serviceClass, implementation as Any)
+			}
+
+			override fun <T> get(serviceClass: Class<T>): T? = this@SharedServiceRegistry.get(providerId, serviceClass)
+
+			override fun <T> getAll(serviceClass: Class<T>): List<T> =
+				this@SharedServiceRegistry.get(providerId, serviceClass)?.let {
+					listOf(it)
+				} ?: emptyList()
+
+			override fun unregister(serviceClass: Class<*>) = this@SharedServiceRegistry.unregister(providerId, serviceClass)
 		}
-
-		override fun <T> get(serviceClass: Class<T>): T? =
-			this@SharedServiceRegistry.get(providerId, serviceClass)
-
-		override fun <T> getAll(serviceClass: Class<T>): List<T> {
-			return this@SharedServiceRegistry.get(providerId, serviceClass)?.let { listOf(it) } ?: emptyList()
-		}
-
-		override fun unregister(serviceClass: Class<*>) =
-			this@SharedServiceRegistry.unregister(providerId, serviceClass)
-	}
 
 	companion object {
 		/** Reserved provider id for services the IDE host registers directly (not a plugin). */
@@ -229,9 +247,8 @@ class ResourceManagerImpl(
 	private val pluginId: String,
 	private val pluginsDir: File,
 	private val classLoader: ClassLoader,
-	private val assetManager: AssetManager? = null
+	private val assetManager: AssetManager? = null,
 ) : ResourceManager {
-
 	private val canonicalPluginsDir = pluginsDir.canonicalFile
 	private val pluginDirectory =
 		File(canonicalPluginsDir, PluginIdValidator.requireValid(pluginId)).canonicalFile.also { directory ->
@@ -264,23 +281,21 @@ class ResourceManagerImpl(
 		return target.toFile()
 	}
 
-	override fun getPluginResource(name: String): ByteArray? {
-		return try {
+	override fun getPluginResource(name: String): ByteArray? =
+		try {
 			classLoader.getResourceAsStream(name)?.use {
 				it.readBytes()
 			}
 		} catch (e: Exception) {
 			null
 		}
-	}
 
-	override fun openPluginResource(name: String): InputStream? {
-		return try {
+	override fun openPluginResource(name: String): InputStream? =
+		try {
 			classLoader.getResourceAsStream(name)
 		} catch (e: Exception) {
 			null
 		}
-	}
 
 	override fun openPluginAsset(path: String): InputStream? {
 		val assets = assetManager ?: return null
@@ -294,18 +309,18 @@ class ResourceManagerImpl(
 
 class PluginLoggerImpl(
 	override val pluginId: String,
-	private val baseLogger: PluginLogger
+	private val baseLogger: PluginLogger,
 ) : PluginLogger {
-
-	private fun formatMessage(message: String): String {
-		return "[$pluginId] $message"
-	}
+	private fun formatMessage(message: String): String = "[$pluginId] $message"
 
 	override fun debug(message: String) {
 		baseLogger.debug(formatMessage(message))
 	}
 
-	override fun debug(message: String, error: Throwable) {
+	override fun debug(
+		message: String,
+		error: Throwable,
+	) {
 		baseLogger.debug(formatMessage(message), error)
 	}
 
@@ -313,7 +328,10 @@ class PluginLoggerImpl(
 		baseLogger.info(formatMessage(message))
 	}
 
-	override fun info(message: String, error: Throwable) {
+	override fun info(
+		message: String,
+		error: Throwable,
+	) {
 		baseLogger.info(formatMessage(message), error)
 	}
 
@@ -321,7 +339,10 @@ class PluginLoggerImpl(
 		baseLogger.warn(formatMessage(message))
 	}
 
-	override fun warn(message: String, error: Throwable) {
+	override fun warn(
+		message: String,
+		error: Throwable,
+	) {
 		baseLogger.warn(formatMessage(message), error)
 	}
 
@@ -329,12 +350,17 @@ class PluginLoggerImpl(
 		baseLogger.error(formatMessage(message))
 	}
 
-	override fun error(message: String, error: Throwable) {
+	override fun error(
+		message: String,
+		error: Throwable,
+	) {
 		baseLogger.error(formatMessage(message), error)
 	}
 }
 
-class PluginRegistry(private val context: Context) {
+class PluginRegistry(
+	private val context: Context,
+) {
 	private val pluginInfos = mutableMapOf<String, PluginInfo>()
 
 	fun registerPlugin(pluginInfo: PluginInfo) {
@@ -345,11 +371,7 @@ class PluginRegistry(private val context: Context) {
 		pluginInfos.remove(pluginId)
 	}
 
-	fun getPlugin(pluginId: String): PluginInfo? {
-		return pluginInfos[pluginId]
-	}
+	fun getPlugin(pluginId: String): PluginInfo? = pluginInfos[pluginId]
 
-	fun getAllPlugins(): List<PluginInfo> {
-		return pluginInfos.values.toList()
-	}
+	fun getAllPlugins(): List<PluginInfo> = pluginInfos.values.toList()
 }
