@@ -37,11 +37,13 @@ class PluginContextImpl(
 		sharedServices?.get(pluginId, serviceClass)
 
 	override fun isPluginActive(pluginId: String): Boolean {
-		return pluginInfoProvider?.invoke(pluginId)?.let { it.isLoaded && it.isEnabled } ?: false
+		val pluginInfo = pluginInfoProvider?.invoke(pluginId)
+		return pluginInfo?.let { it.isLoaded && it.isEnabled } ?: false
 	}
 
 	override fun getPluginVersion(pluginId: String): String? {
-		return pluginInfoProvider?.invoke(pluginId)?.metadata?.version
+		val pluginInfo = pluginInfoProvider?.invoke(pluginId)
+		return pluginInfo?.metadata?.version
 	}
 
 	override fun <T> registerService(serviceClass: Class<T>, serviceImpl: T) {
