@@ -209,7 +209,7 @@ class WebServerTest {
 						4 -> secretProjectPath
 						else -> "test"
 					}
-			}
+				}
 			}
 		val projectDatabase = mockk<SQLiteDatabase>(relaxed = true)
 		every { projectDatabase.rawQuery(any(), any()) } returns cursor

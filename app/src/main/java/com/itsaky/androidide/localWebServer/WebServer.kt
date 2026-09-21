@@ -678,21 +678,33 @@ class WebServer(
 			if (debugEnabled) log.debug("Found an authorized pr/ path, '{}'.", path)
 
 			return when (path) {
-				"pr/bs" -> handleBsEndpoint(writer, output)
-				"pr/ex" -> handleExEndpoint(writer, output)
-				"pr/db" ->
+				"pr/bs" -> {
+					handleBsEndpoint(writer, output)
+				}
+
+				"pr/ex" -> {
+					handleExEndpoint(writer, output)
+				}
+
+				"pr/db" -> {
 					if (config.diagnosticsEnabled) {
 						handleDbEndpoint(writer, output)
 					} else {
 						sendError(writer, output, httpNotFound, "Not Found")
 					}
-				"pr/pr" ->
+				}
+
+				"pr/pr" -> {
 					if (config.diagnosticsEnabled) {
 						handlePrEndpoint(writer, output)
 					} else {
 						sendError(writer, output, httpNotFound, "Not Found")
 					}
-				else -> sendError(writer, output, httpNotFound, "Not Found")
+				}
+
+				else -> {
+					sendError(writer, output, httpNotFound, "Not Found")
+				}
 			}
 		}
 
