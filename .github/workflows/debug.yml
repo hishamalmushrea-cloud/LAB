@@ -75,6 +75,14 @@ jobs:
             python3 scripts/validate_repository_structure.py
           fi
 
+      - name: Configure transferred-repository formatting baseline
+        shell: bash
+        run: |
+          # The upstream repository ratchets against origin/stage, while this transferred
+          # repository intentionally retains main as its baseline branch.
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git update-ref refs/remotes/origin/stage refs/remotes/origin/main
+
       # Run this before the expensive compiler tasks so formatter feedback does not require a full
       # Android build. On failure, apply the formatter only in the disposable checkout and expose
       # its exact patch as bounded annotations that remain readable through the checks API.
