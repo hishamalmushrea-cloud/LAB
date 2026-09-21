@@ -40,8 +40,9 @@ class PluginContextImpl(
 		return pluginInfoProvider?.invoke(pluginId)?.let { it.isLoaded && it.isEnabled } ?: false
 	}
 
-	override fun getPluginVersion(pluginId: String): String? =
-		pluginInfoProvider?.invoke(pluginId)?.metadata?.version
+	override fun getPluginVersion(pluginId: String): String? {
+		return pluginInfoProvider?.invoke(pluginId)?.metadata?.version
+	}
 
 	override fun <T> registerService(serviceClass: Class<T>, serviceImpl: T) {
 		sharedServices?.register(pluginId, serviceClass, serviceImpl as Any)
@@ -201,14 +202,16 @@ class SharedServiceRegistry {
 	 * provider-scoped registry instead of the old cross-plugin-global one.
 	 */
 	fun asRegistry(providerId: String): ServiceRegistry = object : ServiceRegistry {
-		override fun <T> register(serviceClass: Class<T>, implementation: T) =
+		override fun <T> register(serviceClass: Class<T>, implementation: T) {
 			this@SharedServiceRegistry.register(providerId, serviceClass, implementation as Any)
+		}
 
 		override fun <T> get(serviceClass: Class<T>): T? =
 			this@SharedServiceRegistry.get(providerId, serviceClass)
 
-		override fun <T> getAll(serviceClass: Class<T>): List<T> =
-			this@SharedServiceRegistry.get(providerId, serviceClass)?.let { listOf(it) } ?: emptyList()
+		override fun <T> getAll(serviceClass: Class<T>): List<T> {
+			return this@SharedServiceRegistry.get(providerId, serviceClass)?.let { listOf(it) } ?: emptyList()
+		}
 
 		override fun unregister(serviceClass: Class<*>) =
 			this@SharedServiceRegistry.unregister(providerId, serviceClass)

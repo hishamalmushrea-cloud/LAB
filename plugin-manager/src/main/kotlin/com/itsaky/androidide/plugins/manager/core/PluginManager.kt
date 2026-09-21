@@ -502,8 +502,9 @@ class PluginManager private constructor(
 			manifest to loader
 		}
 
-	private fun isInstalledPackage(pluginFile: File): Boolean =
-		runCatching { pluginFile.canonicalFile.parentFile == pluginsDir.canonicalFile }.getOrDefault(false)
+	private fun isInstalledPackage(pluginFile: File): Boolean {
+		return runCatching { pluginFile.canonicalFile.parentFile == pluginsDir.canonicalFile }.getOrDefault(false)
+	}
 
 	private fun requireTrustedPackage(
 		pluginFile: File,
