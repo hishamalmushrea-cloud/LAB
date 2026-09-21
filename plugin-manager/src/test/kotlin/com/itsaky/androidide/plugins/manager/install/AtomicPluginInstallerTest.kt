@@ -106,7 +106,10 @@ class AtomicPluginInstallerTest {
 				validateStaged = {},
 				unloadCurrent = {},
 				loadReplacement = { Result.failure(IllegalStateException("load failed")) },
-				reloadPrevious = { reloaded += it.readText(); Result.success(Unit) },
+				reloadPrevious = {
+					reloaded += it.readText()
+					Result.success(Unit)
+				},
 			)
 		}
 		assertThat(installedFile().readText()).isEqualTo("old")
@@ -195,9 +198,12 @@ class AtomicPluginInstallerTest {
 	}
 
 	private fun installer() = AtomicPluginInstaller(pluginsDir())
+
 	private fun pluginsDir() = File(temporaryFolder.root, "plugins").apply { mkdirs() }
+
 	private fun installedFile() = File(pluginsDir(), "$pluginId.cgp")
+
 	private fun installed(content: String) = installedFile().apply { writeText(content) }
-	private fun source(content: String) =
-		temporaryFolder.newFile("source-${System.nanoTime()}.cgp").apply { writeText(content) }
+
+	private fun source(content: String) = temporaryFolder.newFile("source-${System.nanoTime()}.cgp").apply { writeText(content) }
 }

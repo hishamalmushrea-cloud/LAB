@@ -24,8 +24,7 @@ data class IdeVersion(
 	val week: Int,
 	val patch: Int,
 ) : Comparable<IdeVersion> {
-	override fun compareTo(other: IdeVersion): Int =
-		compareValuesBy(this, other, IdeVersion::year, IdeVersion::week, IdeVersion::patch)
+	override fun compareTo(other: IdeVersion): Int = compareValuesBy(this, other, IdeVersion::year, IdeVersion::week, IdeVersion::patch)
 
 	companion object {
 		private val pattern = Regex("^(\\d{1,4})\\.(\\d{1,2})(?:\\.(\\d+))?(?:[-+].*)?$")
@@ -41,7 +40,9 @@ data class IdeVersion(
 	}
 }
 
-class PluginCompatibilityValidator(hostVersion: String) {
+class PluginCompatibilityValidator(
+	hostVersion: String,
+) {
 	private val host =
 		requireNotNull(IdeVersion.parse(hostVersion)) { "Invalid host IDE version: $hostVersion" }
 
@@ -79,7 +80,11 @@ object PluginDependencyResolver {
 			require(visiting.add(pluginId)) {
 				"Plugin dependency cycle: ${(visiting + pluginId).joinToString(" -> ")}"
 			}
-			dependencies.getValue(pluginId).distinct().sorted().forEach(::visit)
+			dependencies
+				.getValue(pluginId)
+				.distinct()
+				.sorted()
+				.forEach(::visit)
 			visiting.remove(pluginId)
 			visited.add(pluginId)
 			result.add(pluginId)

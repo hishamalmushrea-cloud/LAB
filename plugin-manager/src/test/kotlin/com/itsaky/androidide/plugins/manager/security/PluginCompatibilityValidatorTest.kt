@@ -80,23 +80,25 @@ class PluginCompatibilityValidatorTest {
 		}
 	}
 
-	private fun manifest(min: String, max: String) =
-		PluginManifest(
-			id = "org.example.plugin",
-			name = "Plugin",
-			version = "1.0.0",
-			description = "",
-			author = "",
-			mainClass = "org.example.Plugin",
-			minIdeVersion = min,
-			maxIdeVersion = max,
-			permissions = emptyList(),
-			dependencies = emptyList(),
-			extensions = emptyList(),
-			sidebarItems = 0,
-			iconDay = null,
-			iconNight = null,
-			vcsRevision = null,
-			buildTimestamp = null,
-		)
+	private fun manifest(
+		min: String,
+		max: String,
+	) = PluginManifest(
+		id = "org.example.plugin",
+		name = "Plugin",
+		version = "1.0.0",
+		description = "",
+		author = "",
+		mainClass = "org.example.Plugin",
+		minIdeVersion = min,
+		maxIdeVersion = max,
+		permissions = emptyList(),
+		dependencies = emptyList(),
+		extensions = emptyList(),
+		sidebarItems = 0,
+		iconDay = null,
+		iconNight = null,
+		vcsRevision = null,
+		buildTimestamp = null,
+	)
 }

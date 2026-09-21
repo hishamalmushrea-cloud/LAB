@@ -146,7 +146,10 @@ class AtomicPluginInstaller(
 		}
 	}
 
-	private fun copyAndSync(source: File, destination: File) {
+	private fun copyAndSync(
+		source: File,
+		destination: File,
+	) {
 		source.inputStream().use { input ->
 			FileOutputStream(destination).use { output ->
 				input.copyTo(output)
@@ -234,7 +237,11 @@ class AtomicPluginInstaller(
 							return@forEach
 						}
 					}
-					State.PREPARED.name -> Unit
+
+					State.PREPARED.name -> {
+						Unit
+					}
+
 					State.ROLLING_BACK.name -> {
 						if (backup.exists()) {
 							requireRegularBackup(backup)
@@ -242,6 +249,7 @@ class AtomicPluginInstaller(
 							moveRecovered(backup, target)
 						}
 					}
+
 					State.ACTIVATING.name -> {
 						target.delete()
 						if (backup.exists()) {
@@ -249,7 +257,10 @@ class AtomicPluginInstaller(
 							moveRecovered(backup, target)
 						}
 					}
-					else -> throw IllegalStateException("Unknown plugin transaction state: $state")
+
+					else -> {
+						throw IllegalStateException("Unknown plugin transaction state: $state")
+					}
 				}
 				staged.delete()
 				marker.delete()
@@ -283,7 +294,10 @@ class AtomicPluginInstaller(
 			}
 		}
 
-		private fun moveRecovered(source: File, destination: File) {
+		private fun moveRecovered(
+			source: File,
+			destination: File,
+		) {
 			try {
 				Files.move(source.toPath(), destination.toPath(), ATOMIC_MOVE, REPLACE_EXISTING)
 			} catch (_: AtomicMoveNotSupportedException) {
@@ -303,7 +317,10 @@ class AtomicPluginInstaller(
 			}
 		}
 
-		private fun requireInside(root: File, child: File): File {
+		private fun requireInside(
+			root: File,
+			child: File,
+		): File {
 			val canonicalRoot = root.canonicalFile.toPath()
 			val canonicalChild = child.canonicalFile.toPath()
 			if (!canonicalChild.startsWith(canonicalRoot) || canonicalChild == canonicalRoot) {

@@ -137,7 +137,7 @@ object PluginManifestParser {
 		val normalizedTimestamp = normalizeProvenanceValue(buildTimestamp)
 		return if (
 			maxIdeVersion == null || permissions == null || dependencies == null || extensions == null || buildActions == null ||
-				normalizedActions !== buildActions ||
+			normalizedActions !== buildActions ||
 			normalizedRevision !== vcsRevision || normalizedTimestamp !== buildTimestamp
 		) {
 			copy(

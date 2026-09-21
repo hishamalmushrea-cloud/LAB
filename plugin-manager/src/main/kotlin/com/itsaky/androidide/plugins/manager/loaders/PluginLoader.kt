@@ -352,7 +352,8 @@ class PluginLoader(
 				}
 			signatures
 				.map { signature ->
-					MessageDigest.getInstance("SHA-256")
+					MessageDigest
+						.getInstance("SHA-256")
 						.digest(signature.toByteArray())
 						.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
 				}.toSet()

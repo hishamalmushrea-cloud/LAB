@@ -408,9 +408,10 @@ class PluginManager private constructor(
 			loadPluginStates()
 
 			val pluginFiles =
-				pluginsDir.listFiles { file ->
-					file.isFile && file.name.endsWith(".$PLUGIN_ARCHIVE_EXTENSION", ignoreCase = true)
-				}?.sortedBy { it.name } ?: return@withContext
+				pluginsDir
+					.listFiles { file ->
+						file.isFile && file.name.endsWith(".$PLUGIN_ARCHIVE_EXTENSION", ignoreCase = true)
+					}?.sortedBy { it.name } ?: return@withContext
 
 			logger.info("Found ${pluginFiles.size} plugin files")
 			loadFailures.clear()
@@ -1050,14 +1051,15 @@ class PluginManager private constructor(
 
 	fun getAllPlugins(): List<PluginInfo> {
 		val loaded =
-			loadedPlugins.values.associate { loadedPlugin ->
-				loadedPlugin.manifest.id to
-					PluginInfo(
-						metadata = loadedPlugin.toPluginMetadata(),
-						isEnabled = loadedPlugin.isEnabled,
-						isLoaded = true,
-					)
-			}.toMutableMap()
+			loadedPlugins.values
+				.associate { loadedPlugin ->
+					loadedPlugin.manifest.id to
+						PluginInfo(
+							metadata = loadedPlugin.toPluginMetadata(),
+							isEnabled = loadedPlugin.isEnabled,
+							isLoaded = true,
+						)
+				}.toMutableMap()
 		pluginsDir
 			.listFiles { file ->
 				file.isFile && file.name.endsWith(".$PLUGIN_ARCHIVE_EXTENSION", ignoreCase = true)
