@@ -22,6 +22,7 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
+import android.webkit.CookieManager
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.IntentCompat
@@ -33,6 +34,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.transition.TransitionManager
 import androidx.transition.doOnEnd
 import com.google.android.material.transition.MaterialSharedAxis
+import com.itsaky.androidide.BuildConfig
 import com.itsaky.androidide.FeedbackButtonManager
 import com.itsaky.androidide.R
 import com.itsaky.androidide.actions.ActionData
@@ -49,6 +51,7 @@ import com.itsaky.androidide.fragments.RecentProjectsFragment
 import com.itsaky.androidide.idetooltips.TooltipManager
 import com.itsaky.androidide.idetooltips.TooltipTag.PROJECT_RECENT_TOP
 import com.itsaky.androidide.idetooltips.TooltipTag.SETUP_OVERVIEW
+import com.itsaky.androidide.localWebServer.LocalWebServerSecurity
 import com.itsaky.androidide.localWebServer.ServerConfig
 import com.itsaky.androidide.localWebServer.WebServer
 import com.itsaky.androidide.models.DeepLinkRequest
@@ -595,6 +598,12 @@ class MainActivity : EdgeToEdgeIDEActivity() {
 	}
 
 	private fun startWebServer() {
+		val sessionToken = LocalWebServerSecurity.newSessionToken()
+		CookieManager.getInstance().setCookie(
+			LocalWebServerSecurity.serverOrigin(LocalWebServerSecurity.DEFAULT_PORT),
+			LocalWebServerSecurity.sessionCookie(sessionToken),
+		)
+
 		lifecycleScope.launch(Dispatchers.IO) {
 			try {
 				val dbFile = Environment.DOC_DB
@@ -603,7 +612,8 @@ class MainActivity : EdgeToEdgeIDEActivity() {
 					WebServer(
 						ServerConfig(
 							databasePath = dbFile.absolutePath,
-							fileDirPath = applicationContext.filesDir.absolutePath,
+							sessionToken = sessionToken,
+							diagnosticsEnabled = BuildConfig.DEBUG,
 						),
 					)
 				webServer = server

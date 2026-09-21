@@ -126,6 +126,216 @@ class WebServerTest {
 	// server -- but only once per database, cached across every subsequent request against that
 	// same database rather than re-fetched per-request.
 	@Test
+	fun `an app without the session capability cannot read recent project paths`() {
+		val port = freePort()
+		val config = testConfig(port).copy(diagnosticsEnabled = true)
+		val projectDatabase = mockk<SQLiteDatabase>(relaxed = true)
+		every {
+			SQLiteDatabase.openDatabase(config.projectDatabasePath, isNull(), any())
+		} returns projectDatabase
+
+		withRunningServer(config) {
+			val missingSession = sendRawGetRequest(port, "/pr/pr", headers = mapOf("Host" to "localhost:$port"))
+			val wrongSession =
+				sendRawGetRequest(
+					port,
+					"/pr/pr",
+					headers =
+						mapOf(
+							"Host" to "localhost:$port",
+							LocalWebServerSecurity.SESSION_HEADER to "wrong-session-token-0123456789abcdef",
+						),
+				)
+
+			listOf(missingSession, wrongSession).forEach { response ->
+				assertTrue("Expected the protected endpoint to be hidden, got:\n$response", response.startsWith("HTTP/1.1 404"))
+				assertFalse("A protected path reached the response:\n$response", response.contains(config.projectDatabasePath))
+			}
+			verify(exactly = 0) {
+				SQLiteDatabase.openDatabase(config.projectDatabasePath, isNull(), any())
+			}
+		}
+	}
+
+	@Test
+	fun `release configuration omits diagnostic endpoints even with a valid session`() {
+		val port = freePort()
+		val config = testConfig(port).copy(diagnosticsEnabled = false)
+
+		withRunningServer(config) {
+			listOf("/pr/pr", "/pr/db").forEach { path ->
+				val response = sendRawGetRequest(port, path)
+				assertTrue("Expected $path to be absent, got:\n$response", response.startsWith("HTTP/1.1 404"))
+			}
+			verify(exactly = 0) {
+				SQLiteDatabase.openDatabase(config.projectDatabasePath, isNull(), any())
+			}
+		}
+	}
+
+	@Test
+	fun `webview cookie authorizes dynamic documentation without putting the capability in the URL`() {
+		val port = freePort()
+		val config = testConfig(port)
+
+		withRunningServer(config) {
+			val response =
+				sendRawGetRequest(
+					port,
+					"/pr/ex",
+					headers =
+						mapOf(
+							"Host" to "localhost:$port",
+							"Cookie" to "${LocalWebServerSecurity.SESSION_COOKIE_NAME}=$TEST_SESSION_TOKEN",
+						),
+				)
+
+			assertTrue("Expected the session cookie to authorize /pr/ex, got:\n$response", response.startsWith("HTTP/1.1 200"))
+		}
+	}
+
+	@Test
+	fun `debug diagnostics accept the exact session capability without exposing it in a URL`() {
+		val port = freePort()
+		val config = testConfig(port).copy(diagnosticsEnabled = true)
+		val secretProjectPath = "/storage/emulated/0/private-project"
+		val cursor =
+			mockk<Cursor>(relaxed = true) {
+				every { moveToNext() } returnsMany listOf(true, false)
+				every { getString(any()) } answers {
+					when (firstArg<Int>()) {
+						0 -> "7"
+						1 -> "Private project"
+						4 -> secretProjectPath
+						else -> "test"
+					}
+			}
+			}
+		val projectDatabase = mockk<SQLiteDatabase>(relaxed = true)
+		every { projectDatabase.rawQuery(any(), any()) } returns cursor
+		every {
+			SQLiteDatabase.openDatabase(config.projectDatabasePath, isNull(), any())
+		} returns projectDatabase
+
+		withRunningServer(config) {
+			val response = sendRawGetRequest(port, "/pr/pr")
+
+			assertTrue("Expected an authorized diagnostic response, got:\n$response", response.startsWith("HTTP/1.1 200"))
+			assertTrue("Expected the project row in debug diagnostics, got:\n$response", response.contains(secretProjectPath))
+			verify(exactly = 1) {
+				SQLiteDatabase.openDatabase(config.projectDatabasePath, isNull(), any())
+			}
+		}
+	}
+
+	@Test
+	fun `host origin and request paths are parsed before routing`() {
+		val port = freePort()
+		val config = testConfig(port)
+
+		withRunningServer(config) {
+			val wrongHost =
+				sendRawGetRequest(
+					port,
+					"/pr/ex",
+					headers =
+						mapOf(
+							"Host" to "attacker.example",
+							LocalWebServerSecurity.SESSION_HEADER to TEST_SESSION_TOKEN,
+						),
+				)
+			assertTrue("Expected an invalid Host to fail, got:\n$wrongHost", wrongHost.startsWith("HTTP/1.1 400"))
+
+			val crossSite =
+				sendRawGetRequest(
+					port,
+					"/pr/ex",
+					headers =
+						mapOf(
+							"Host" to "localhost:$port",
+							"Origin" to "https://attacker.example",
+							LocalWebServerSecurity.SESSION_HEADER to TEST_SESSION_TOKEN,
+						),
+				)
+			assertTrue("Expected a cross-site origin to fail, got:\n$crossSite", crossSite.startsWith("HTTP/1.1 403"))
+
+			listOf("/../pr/ex", "/%2e%2e/pr/ex", "/pr%2fex", "//localhost:$port/pr/ex").forEach { path ->
+				val response = sendRawGetRequest(port, path)
+				assertTrue("Expected a non-canonical path to fail ($path), got:\n$response", response.startsWith("HTTP/1.1 400"))
+			}
+		}
+	}
+
+	@Test
+	fun `an incomplete client times out instead of monopolizing the listener`() {
+		val port = freePort()
+		val config = testConfig(port).copy(clientRequestTimeoutMs = 100)
+
+		withRunningServer(config) {
+			Socket().use { stalled ->
+				stalled.connect(InetSocketAddress("localhost", port), 2_000)
+				stalled.soTimeout = 2_000
+				stalled.getOutputStream().apply {
+					write("GET /missing HTTP/1.1\r\nHost: localhost:$port\r\n".toByteArray(Charsets.ISO_8859_1))
+					flush()
+				}
+				assertEquals("Expected the timed-out socket to close without a response", -1, stalled.getInputStream().read())
+			}
+
+			val healthy = sendRawGetRequest(port, "/missing")
+			assertTrue("Expected the listener to recover after the timeout, got:\n$healthy", healthy.startsWith("HTTP/1.1 404"))
+		}
+	}
+
+	@Test
+	fun `the formerly unreachable playground executor remains unavailable`() {
+		val port = freePort()
+		val config = testConfig(port)
+
+		withRunningServer(config) {
+			val response =
+				sendRawRequest(
+					port,
+					"POST /playground/execute HTTP/1.1\r\n" +
+						"Host: localhost:$port\r\nContent-Length: 0\r\n\r\n",
+				)
+
+			assertTrue("Expected executable POSTs to stay unsupported, got:\n$response", response.startsWith("HTTP/1.1 501"))
+		}
+	}
+
+	@Test
+	fun `duplicate and oversized headers are rejected without killing the server`() {
+		val port = freePort()
+		val config = testConfig(port)
+
+		withRunningServer(config) {
+			val duplicateSession =
+				sendRawRequest(
+					port,
+					"GET /pr/ex HTTP/1.1\r\n" +
+						"Host: localhost:$port\r\n" +
+						"${LocalWebServerSecurity.SESSION_HEADER}: $TEST_SESSION_TOKEN\r\n" +
+						"${LocalWebServerSecurity.SESSION_HEADER}: $TEST_SESSION_TOKEN\r\n\r\n",
+				)
+			assertTrue(
+				"Expected duplicate capability headers to fail, got:\n$duplicateSession",
+				duplicateSession.startsWith("HTTP/1.1 400"),
+			)
+
+			val oversized =
+				sendRawRequest(
+					port,
+					"GET / HTTP/1.1\r\nHost: localhost:$port\r\nX-Padding: ${"a".repeat(9_000)}\r\n\r\n",
+				)
+			assertTrue("Expected an oversized header to fail, got:\n$oversized", oversized.startsWith("HTTP/1.1 431"))
+
+			val healthy = sendRawGetRequest(port, "/missing")
+			assertTrue("Expected the listener to survive rejected clients, got:\n$healthy", healthy.startsWith("HTTP/1.1 404"))
+		}
+	}
+
+	@Test
 	fun `compression dictionary loads lazily on first use, once per database, not once per request`() {
 		val port = freePort()
 
@@ -541,6 +751,22 @@ class WebServerTest {
 		}
 	}
 
+	private fun withRunningServer(
+		config: ServerConfig,
+		testBody: (Int) -> Unit,
+	) {
+		val server = WebServer(config)
+		val serverThread = Thread { server.start() }.apply { isDaemon = true }
+		serverThread.start()
+		try {
+			awaitPortBound(config.port)
+			testBody(config.port)
+		} finally {
+			server.stop()
+			serverThread.join(2_000)
+		}
+	}
+
 	// Sends a bare GET over a raw socket and hands back everything the server wrote, reading
 	// until the server closes the connection (every response sends "Connection: close").
 	// Plaintext HTTP is intentional and stays on this machine: WebServer is a loopback-only
@@ -548,12 +774,25 @@ class WebServerTest {
 	private fun sendRawGetRequest(
 		port: Int,
 		path: String,
+		headers: Map<String, String> =
+			mapOf(
+				"Host" to "localhost:$port",
+				LocalWebServerSecurity.SESSION_HEADER to TEST_SESSION_TOKEN,
+			),
+	): String {
+		val serializedHeaders = headers.entries.joinToString(separator = "") { (name, value) -> "$name: $value\r\n" }
+		return sendRawRequest(port, "GET $path HTTP/1.1\r\n$serializedHeaders\r\n")
+	}
+
+	private fun sendRawRequest(
+		port: Int,
+		request: String,
 	): String =
 		Socket().use { socket ->
 			socket.connect(InetSocketAddress("localhost", port), 2_000)
 			socket.soTimeout = 2_000
 			socket.getOutputStream().apply {
-				write("GET $path HTTP/1.1\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
+				write(request.toByteArray(Charsets.ISO_8859_1))
 				flush()
 			}
 			socket.getInputStream().readBytes().toString(Charsets.ISO_8859_1)

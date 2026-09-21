@@ -198,6 +198,35 @@ jobs:
           SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
           "$SDKMANAGER" 'ndk;29.0.14206865' 'cmake;3.22.1'
 
+      - name: Test localhost server security boundary
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! ./gradlew :app:testV8DebugUnitTest \
+            --tests 'com.itsaky.androidide.localWebServer.*' \
+            :app:compileV8DebugAndroidTestKotlin --no-daemon \
+            2>&1 | tee localhost-server-tests.log; then
+            python3 - localhost-server-tests.log 'Localhost-server verification failed' <<'PY'
+          import sys
+          path, title = sys.argv[1:]
+          lines = open(path, errors='replace').read().splitlines()
+          errors = [line for line in lines if line.startswith(('e: ', 'error: '))]
+          tail = [line for line in lines if not line.startswith('w: ')][-120:]
+          text = '\n'.join(errors[-100:] + ['--- build tail ---'] + tail)
+          for index in range(0, len(text), 3000):
+              chunk = text[index:index + 3000]
+              chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::error title={title} (part {index // 3000 + 1})::{chunk}')
+          PY
+            {
+              echo '## Localhost-server verification failure'
+              echo '```text'
+              tail -n 500 localhost-server-tests.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
       - name: Compile plugin app integration
         shell: bash
         run: |

@@ -42,17 +42,7 @@ class AcceptFailureTest {
 				delays += it
 				onSleep(it)
 			},
-			config =
-				ServerConfig(
-					port = 0,
-					databasePath = "/nonexistent/test.db",
-					fileDirPath = "/tmp",
-					debugDatabasePath = "/nonexistent/debug.db",
-					debugEnablePath = "/nonexistent/debug-flag",
-					experimentsEnablePath = "/nonexistent/exp-flag",
-					clearCacheEnablePath = "/nonexistent/cs0-flag",
-					projectDatabasePath = "/nonexistent/recent-projects.db",
-				),
+			config = testServerConfig(),
 		)
 
 	@Test

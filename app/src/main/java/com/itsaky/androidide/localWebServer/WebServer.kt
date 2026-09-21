@@ -22,15 +22,16 @@ import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketTimeoutException
 import java.net.URLDecoder
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 
 data class ServerConfig(
-	val port: Int = 6174,
+	val port: Int = LocalWebServerSecurity.DEFAULT_PORT,
 	val databasePath: String,
-	val fileDirPath: String,
+	val sessionToken: String,
+	val diagnosticsEnabled: Boolean = false,
 	val bindName: String = "localhost",
+	val clientRequestTimeoutMs: Int = 2_000,
 	val debugDatabasePath: String =
 		getExternalStorageDirectory().toString() +
 			"/Download/documentation.db",
@@ -49,7 +50,17 @@ data class ServerConfig(
 	// ADFA-5175: how often the sdcard debug database may be stat'ed. It lives on FUSE-backed
 	// emulated storage, and it is a developer-only override, so once a second is plenty.
 	val debugDatabaseCheckIntervalMs: Long = 1000,
-)
+) {
+	init {
+		LocalWebServerSecurity.requireValidSessionToken(sessionToken)
+		require(LocalWebServerSecurity.isLoopbackBindName(bindName)) {
+			"Local web server must bind to a loopback address"
+		}
+		require(clientRequestTimeoutMs in 100..60_000) {
+			"Client request timeout must be between 100 ms and 60 seconds"
+		}
+	}
+}
 
 /**
  * The `bookshelf` template's JSON context: the keys the template reads, and what SQLite's JSON1
@@ -84,14 +95,6 @@ internal data class BookshelfBook(
 	@SerializedName("link") val link: String,
 	/** 1 or 0, not a boolean: the shape the template already expects. */
 	@SerializedName("pdf") val pdf: Int,
-)
-
-data class JavaExecutionResult(
-	val compileOutput: String,
-	val runOutput: String,
-	val timedOut: Boolean,
-	val compileTimeMs: Long,
-	val timeoutLimit: Long,
 )
 
 class WebServer(
@@ -165,8 +168,19 @@ class WebServer(
 	// 30 seconds while a failure persists.
 	private val acceptHeartbeatRetries = 15L
 
-	private val httpInternalServerError = 500
+	private val httpBadRequest = 400
+	private val httpForbidden = 403
 	private val httpNotFound = 404
+	private val httpUriTooLong = 414
+	private val httpInternalServerError = 500
+	private val httpNotImplemented = 501
+	private val httpRequestHeaderFieldsTooLarge = 431
+
+	private val maxRequestLineBytes = 8 * 1024
+	private val maxHeaderLineBytes = 8 * 1024
+	private val maxHeaderBytes = 32 * 1024
+	private val maxHeaderCount = 64
+	private val headerNamePattern = Regex("[!#$%&'*+.^_`|~0-9A-Za-z-]+")
 
 	// Hal Eisen: required to fix StrictMode.VmPolicy.Builder.detectUntaggedSockets().
 	private val socketStatsTag = 0xC0DE
@@ -313,6 +327,9 @@ class WebServer(
 	/** Serves one connection and closes it, whatever happened. */
 	private fun serveThenClose(client: Socket) {
 		try {
+			// This listener is deliberately single-client. Without a read deadline, another Android
+			// app can hold it forever by connecting to the fixed port and never finishing one header.
+			client.soTimeout = config.clientRequestTimeoutMs
 			handleClient(client)
 		} catch (e: Exception) {
 			reportClientFailure(client, e)
@@ -339,6 +356,10 @@ class WebServer(
 
 		if (e is java.net.SocketException && e.message?.contains("Closed", ignoreCase = true) == true) {
 			if (debugEnabled) log.debug("Client disconnected: {}", e.message)
+			return
+		}
+		if (e is SocketTimeoutException) {
+			if (debugEnabled) log.debug("Client did not finish its request before the deadline.")
 			return
 		}
 		log.error("Error handling client: {}", e.message, e)
@@ -458,17 +479,33 @@ class WebServer(
 			false
 		}
 
-	/**
-	 * Reads an HTTP header line from the input stream.
-	 *
-	 * @return The line decoded as ISO-8859-1 without its line terminator, or `null` if the stream ends before any data is read.
-	 */
-	private fun readLineFromStream(input: InputStream): String? {
+	private data class ParsedRequest(
+		val method: String,
+		val path: String,
+		val headers: Map<String, String>,
+	)
+
+	private class RequestRejected(
+		val statusCode: Int,
+		val reason: String,
+	) : Exception(reason)
+
+	/** Reads one bounded ISO-8859-1 HTTP line without its CRLF terminator. */
+	private fun readLineFromStream(
+		input: InputStream,
+		maxBytes: Int,
+		overflowStatus: Int,
+		overflowReason: String,
+		deadlineNanos: Long,
+	): String? {
 		val baos = ByteArrayOutputStream()
 		while (true) {
+			if (System.nanoTime() >= deadlineNanos) throw SocketTimeoutException("Request deadline exceeded")
 			val b = input.read()
+			if (System.nanoTime() >= deadlineNanos) throw SocketTimeoutException("Request deadline exceeded")
 			if (b == -1) return if (baos.size() == 0) null else baos.toString(Charsets.ISO_8859_1).trimEnd('\r')
 			if (b == '\n'.code) break
+			if (baos.size() >= maxBytes) throw RequestRejected(overflowStatus, overflowReason)
 			baos.write(b)
 		}
 		val bytes = baos.toByteArray()
@@ -476,68 +513,147 @@ class WebServer(
 		return String(bytes, 0, len, Charsets.ISO_8859_1)
 	}
 
-	/**
-	 * Parses an HTTP request and routes supported GET requests to the appropriate handler.
-	 *
-	 * Malformed request lines receive a 400 response, while unsupported methods receive a 501 response.
-	 */
+	private fun parseRequest(input: InputStream): ParsedRequest? {
+		val deadlineNanos = System.nanoTime() + config.clientRequestTimeoutMs * 1_000_000L
+		val requestLine =
+			readLineFromStream(
+				input,
+				maxRequestLineBytes,
+				httpUriTooLong,
+				"URI Too Long",
+				deadlineNanos,
+			)
+				?: return null
+		if (debugEnabled) log.debug("Request is {}", requestLine)
+
+		val parts = requestLine.split(' ')
+		if (parts.size != 3 || parts.any { it.isEmpty() }) {
+			throw RequestRejected(httpBadRequest, "Bad Request")
+		}
+		val method = parts[0]
+		val path = parseRequestPath(parts[1])
+		val version = parts[2]
+		if (version != "HTTP/1.0" && version != "HTTP/1.1") {
+			throw RequestRejected(httpBadRequest, "Bad Request")
+		}
+
+		val headers = linkedMapOf<String, String>()
+		var headerBytes = 0
+		while (true) {
+			val line =
+				readLineFromStream(
+					input,
+					maxHeaderLineBytes,
+					httpRequestHeaderFieldsTooLarge,
+					"Request Header Fields Too Large",
+					deadlineNanos,
+				) ?: break
+			if (line.isEmpty()) break
+
+			headerBytes += line.length + 2
+			if (headers.size >= maxHeaderCount || headerBytes > maxHeaderBytes) {
+				throw RequestRejected(httpRequestHeaderFieldsTooLarge, "Request Header Fields Too Large")
+			}
+			if (line.firstOrNull()?.isWhitespace() == true) {
+				throw RequestRejected(httpBadRequest, "Bad Request")
+			}
+			val colon = line.indexOf(':')
+			if (colon <= 0) throw RequestRejected(httpBadRequest, "Bad Request")
+			val name = line.substring(0, colon).lowercase()
+			val value = line.substring(colon + 1).trim()
+			val hasControlCharacter = value.any { (it.code < 0x20 && it != '\t') || it.code == 0x7f }
+			if (!headerNamePattern.matches(name) || hasControlCharacter) {
+				throw RequestRejected(httpBadRequest, "Bad Request")
+			}
+			if (name in headers) {
+				throw RequestRejected(httpBadRequest, "Bad Request")
+			}
+			headers[name] = value
+			if (debugEnabled) {
+				val loggedValue =
+					if (name == LocalWebServerSecurity.SESSION_HEADER || name == "cookie") {
+						"<redacted>"
+					} else {
+						value
+					}
+				log.debug("Header: {}: {}", name, loggedValue)
+			}
+		}
+
+		val host = headers["host"]
+		if (version == "HTTP/1.1" && host == null) {
+			throw RequestRejected(httpBadRequest, "Bad Request")
+		}
+		if (host != null && !LocalWebServerSecurity.isAllowedHost(host, config.port)) {
+			throw RequestRejected(httpBadRequest, "Bad Request")
+		}
+		if (headers["origin"]?.let { !LocalWebServerSecurity.isAllowedOrigin(it, config.port) } == true ||
+			headers["sec-fetch-site"].equals("cross-site", ignoreCase = true)
+		) {
+			throw RequestRejected(httpForbidden, "Forbidden")
+		}
+
+		return ParsedRequest(method, path, headers)
+	}
+
+	private fun parseRequestPath(target: String): String {
+		if (
+			target.isEmpty() ||
+			!target.startsWith('/') ||
+			target.startsWith("//") ||
+			target.contains('#') ||
+			target.any { it.code < 0x20 || it.code == 0x7f || it == '\\' }
+		) {
+			throw RequestRejected(httpBadRequest, "Bad Request")
+		}
+
+		val rawPath = target.substringBefore('?')
+		if (rawPath.length > maxRequestLineBytes) {
+			throw RequestRejected(httpUriTooLong, "URI Too Long")
+		}
+		val path = rawPath.removePrefix("/")
+		if (path.contains("//")) {
+			throw RequestRejected(httpBadRequest, "Bad Request")
+		}
+		path.split('/').forEach { segment ->
+			val decoded =
+				runCatching { URLDecoder.decode(segment.replace("+", "%2B"), Charsets.UTF_8.name()) }
+					.getOrNull()
+			if (
+				segment == "." ||
+				segment == ".." ||
+				decoded == "." ||
+				decoded == ".." ||
+				decoded?.any { it == '/' || it == '\\' } == true
+			) {
+				throw RequestRejected(httpBadRequest, "Bad Request")
+			}
+		}
+		return path
+	}
+
+	/** Parses one request and routes supported GETs without trusting loopback as an app boundary. */
 	private fun handleClient(clientSocket: Socket) {
 		if (debugEnabled) log.debug("In handleClient(), socket is {}.", clientSocket)
 
 		val input = clientSocket.getInputStream()
-		if (debugEnabled) log.debug("  input is {}.", input)
-
 		val output = clientSocket.getOutputStream()
-		if (debugEnabled) log.debug("  output is {}.", output)
-
 		val writer = PrintWriter(output, true)
-		if (debugEnabled) log.debug("  writer is {}.", writer)
 
-		// Read the request method line, it is always the first line of the request
-		var requestLine = readLineFromStream(input)
-		if (requestLine == null) {
-			if (debugEnabled) log.debug("requestLine is null. Returning from handleClient() early.")
-			return
-		}
-		if (debugEnabled) log.debug("Request is {}", requestLine)
-
-		// Parse the request
-		// Request line should look like "GET /a/b/c.html HTTP/1.1"
-		val parts = requestLine.split(" ")
-		if (parts.size != 3) {
-			return sendError(writer, output, 400, "Bad Request")
-		}
-
-		// extract the request method (e.g. GET, POST, PUT)
-		val method = parts[0]
-		var path = parts[1].split("?")[0] // Discard any HTTP query parameters.
-		path = path.substring(1)
-
-		// Read all headers until blank line (needed for Content-Length on POST)
-		val headers = mutableMapOf<String, String>()
-		while (true) {
-			requestLine = readLineFromStream(input) ?: break
-			if (requestLine.isEmpty()) break
-			if (debugEnabled) log.debug("Header: {}", requestLine)
-			val colon = requestLine.indexOf(':')
-			if (colon > 0) {
-				headers[requestLine.substring(0, colon).trim().lowercase()] = requestLine.substring(colon + 1).trim()
+		val request =
+			try {
+				parseRequest(input) ?: return
+			} catch (rejected: RequestRejected) {
+				return sendError(writer, output, rejected.statusCode, rejected.reason)
 			}
-		}
 
-		// Playground endpoint: POST only, handled before GET-only check
-		if (false && path == "playground/execute") {
-			return handlePlaygroundExecute(input, writer, output, method, headers)
-		}
-
-		// we only support teh GET method, return an error page for anything else
-		if (method != "GET") {
-			return sendError(writer, output, 501, "Not Implemented")
+		if (request.method != "GET") {
+			return sendError(writer, output, httpNotImplemented, "Not Implemented")
 		}
 
 		// The content source applies a pending sdcard debug-database swap inside lookup()/withDatabase(),
 		// so a request reaching neither -- an unknown /pr/ target -- does not poll for one.
-		serveRequest(writer, output, path)
+		serveRequest(writer, output, request.path, request.headers)
 	}
 
 	/**
@@ -551,17 +667,32 @@ class WebServer(
 		writer: PrintWriter,
 		output: java.io.OutputStream,
 		path: String,
+		headers: Map<String, String>,
 	) {
-		// Handle the special "pr" endpoint with highest priority
+		// Every dynamic endpoint is a process-local capability. Loopback alone does not separate
+		// Android applications: any installed app can open this fixed port and spoof a Host header.
 		if (path.startsWith("pr/", false)) {
-			if (debugEnabled) log.debug("Found a pr/ path, '{}'.", path)
+			if (!LocalWebServerSecurity.hasValidSession(headers, config.sessionToken)) {
+				return sendError(writer, output, httpNotFound, "Not Found")
+			}
+			if (debugEnabled) log.debug("Found an authorized pr/ path, '{}'.", path)
 
 			return when (path) {
 				"pr/bs" -> handleBsEndpoint(writer, output)
-				"pr/db" -> handleDbEndpoint(writer, output)
-				"pr/pr" -> handlePrEndpoint(writer, output)
 				"pr/ex" -> handleExEndpoint(writer, output)
-				else -> sendError(writer, output, httpNotFound, "Not Found", "Path requested: '$path'.")
+				"pr/db" ->
+					if (config.diagnosticsEnabled) {
+						handleDbEndpoint(writer, output)
+					} else {
+						sendError(writer, output, httpNotFound, "Not Found")
+					}
+				"pr/pr" ->
+					if (config.diagnosticsEnabled) {
+						handlePrEndpoint(writer, output)
+					} else {
+						sendError(writer, output, httpNotFound, "Not Found")
+					}
+				else -> sendError(writer, output, httpNotFound, "Not Found")
 			}
 		}
 
@@ -622,6 +753,8 @@ class WebServer(
 			writer.println("HTTP/1.1 200 OK")
 			writer.println("Content-Type: $contentTypeHeader")
 			writer.println("Content-Length: ${bytes.size}")
+			writer.println("X-Content-Type-Options: nosniff")
+			writer.println("Referrer-Policy: no-referrer")
 			writer.println("Connection: close")
 			writer.println()
 			writer.flush()
@@ -1158,6 +1291,9 @@ th { background-color: #f2f2f2; }
 			"""HTTP/1.1 200 OK
 Content-Type: text/html; charset=utf-8
 Content-Length: ${htmlBytes.size}
+Cache-Control: no-store
+X-Content-Type-Options: nosniff
+Referrer-Policy: no-referrer
 Connection: close
 """,
 		)
@@ -1207,6 +1343,8 @@ Connection: close
 				"""HTTP/1.1 $code $message
 Content-Type: text/plain; charset=utf-8
 Content-Length: ${bodyBytes.size}
+Cache-Control: no-store
+X-Content-Type-Options: nosniff
 Connection: close
 """,
 			)
@@ -1230,6 +1368,7 @@ Connection: close
 Content-Type: text/css; charset=utf-8
 Content-Length: ${bodyBytes.size}
 Cache-Control: no-store
+X-Content-Type-Options: nosniff
 Connection: close
 """,
 		)
@@ -1238,177 +1377,5 @@ Connection: close
 		output.flush()
 
 		if (debugEnabled) log.debug("Leaving sendCSS().")
-	}
-
-	private fun handlePlaygroundExecute(
-		input: java.io.InputStream,
-		writer: PrintWriter,
-		output: java.io.OutputStream,
-		method: String,
-		headers: Map<String, String>,
-	) {
-		if (method != "POST") {
-			return sendError(writer, output, 405, "Method Not Allowed")
-		}
-		val contentLengthStr =
-			headers["content-length"] ?: run {
-				return sendError(writer, output, 400, "Bad Request", "Missing Content-Length")
-			}
-		val contentLength =
-			contentLengthStr.toIntOrNull() ?: run {
-				return sendError(writer, output, 400, "Bad Request", "Invalid Content-Length")
-			}
-		if (contentLength <= 0) {
-			return sendError(writer, output, 400, "Bad Request", "Content-Length must be positive")
-		}
-		if (contentLength > 10_000) {
-			return sendError(writer, output, 413, "Payload Too Large")
-		}
-		val body = ByteArray(contentLength)
-		var offset = 0
-		while (offset < contentLength) {
-			val read = input.read(body, offset, contentLength - offset)
-			if (read <= 0) {
-				return sendError(writer, output, 400, "Bad Request", "Input stream interrupted prematurely")
-			}
-			offset += read
-		}
-		val data =
-			parseFormDataField(body, "data") ?: run {
-				return sendError(writer, output, 400, "Bad Request", "Missing or empty form field 'data'")
-			}
-		if (data.size > 10_000) {
-			return sendError(writer, output, 413, "Payload Too Large")
-		}
-		val workDir =
-			File(config.fileDirPath, "playground_${System.nanoTime()}_${java.util.UUID.randomUUID()}")
-				.apply { mkdirs() }
-		try {
-			val sourceFile = createFileFromPost(data, workDir)
-			val result = compileAndRunJava(sourceFile)
-			val sourceString = data.toString(Charsets.UTF_8)
-			val responseBody = sourceString + result
-			val responseBytes = responseBody.toByteArray(Charsets.UTF_8)
-			writer.println("HTTP/1.1 200 OK")
-			writer.println("Content-Type: text/plain; charset=utf-8")
-			writer.println("Content-Length: ${responseBytes.size}")
-			writer.println()
-			writer.flush()
-			output.write(responseBytes)
-			output.flush()
-		} finally {
-			workDir.deleteRecursively()
-		}
-	}
-
-	private fun parseFormDataField(
-		body: ByteArray,
-		fieldName: String,
-	): ByteArray? {
-		val bodyStr = body.toString(Charsets.UTF_8)
-		val pairs = bodyStr.split("&")
-		for (pair in pairs) {
-			val eq = pair.indexOf('=')
-			if (eq < 0) continue
-			val key = URLDecoder.decode(pair.substring(0, eq), "UTF-8")
-			if (key != fieldName) continue
-			val value = pair.substring(eq + 1)
-			val decoded = URLDecoder.decode(value, "UTF-8")
-			if (decoded.isEmpty()) return null
-			return decoded.toByteArray(Charsets.UTF_8)
-		}
-		return null
-	}
-
-	private fun createFileFromPost(
-		data: ByteArray,
-		workDir: File,
-	): File {
-		require(data.size <= 10_000) { "data exceeds 10000 bytes" }
-		val file = File(workDir, "Playground.java")
-		file.writeBytes(data)
-		return file
-	}
-
-	private fun compileAndRunJava(sourceFile: File): String {
-		val dir = sourceFile.parentFile
-		val fileName = sourceFile.nameWithoutExtension
-		val classFile = File(dir, "$fileName.class")
-		classFile.delete()
-		val directoryPath = config.fileDirPath
-		val javacPath = "$directoryPath/usr/bin/javac"
-		val javaPath = "$directoryPath/usr/bin/java"
-		val filePath = sourceFile.absolutePath
-
-		val compileTimeoutSec = 60L
-		val runTimeoutSec = 120L
-		val destroyWaitSec = 5L
-
-		try {
-			val javac =
-				ProcessBuilder(javacPath, filePath)
-					.directory(dir)
-					.redirectErrorStream(true)
-					.start()
-			javac.outputStream.close()
-			val compileOutputRef = AtomicReference<String>("")
-			val compileReader =
-				Thread {
-					compileOutputRef.set(
-						javac.inputStream.bufferedReader().readText(),
-					)
-				}
-			compileReader.start()
-			val compileDone =
-				javac.waitFor(compileTimeoutSec, TimeUnit.SECONDS)
-			if (!compileDone) {
-				javac.destroyForcibly()
-				javac.waitFor(destroyWaitSec, TimeUnit.SECONDS)
-				compileReader.join(1000)
-				return "Compilation timed out after ${compileTimeoutSec}s:\n${compileOutputRef.get()}"
-			}
-			compileReader.join(2000)
-			val compileOutput = compileOutputRef.get()
-			if (javac.exitValue() != 0) {
-				return "Compilation failed:\n$compileOutput"
-			}
-
-			val java =
-				ProcessBuilder(
-					javaPath,
-					"-cp",
-					dir?.absolutePath ?: "",
-					fileName,
-				).directory(dir)
-					.redirectErrorStream(true)
-					.start()
-			java.outputStream.close()
-			val runOutputRef = AtomicReference<String>("")
-			val runReader =
-				Thread {
-					runOutputRef.set(
-						java.inputStream.bufferedReader().readText(),
-					)
-				}
-			runReader.start()
-			val runDone = java.waitFor(runTimeoutSec, TimeUnit.SECONDS)
-			if (!runDone) {
-				java.destroyForcibly()
-				java.waitFor(destroyWaitSec, TimeUnit.SECONDS)
-				runReader.join(1000)
-				return "Execution timed out after ${runTimeoutSec}s:\n${runOutputRef.get()}"
-			}
-			runReader.join(2000)
-			val runOutput = runOutputRef.get()
-
-			return if (compileOutput.isNotBlank()) {
-				"Compile output\n $compileOutput\n Program output\n$runOutput"
-			} else {
-				"Program output\n $runOutput"
-			}
-		} catch (e: InterruptedException) {
-			Thread.currentThread().interrupt()
-			return "Compilation or execution interrupted."
-		}
 	}
 }

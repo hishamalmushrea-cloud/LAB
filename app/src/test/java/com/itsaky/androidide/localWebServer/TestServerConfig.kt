@@ -1,5 +1,7 @@
 package com.itsaky.androidide.localWebServer
 
+internal const val TEST_SESSION_TOKEN = "test-session-token-0123456789abcdef"
+
 /**
  * The `ServerConfig` every test in this package uses.
  *
@@ -11,7 +13,7 @@ internal fun testServerConfig(port: Int = 0) =
 	ServerConfig(
 		port = port,
 		databasePath = "/nonexistent/test.db",
-		fileDirPath = "/tmp",
+		sessionToken = TEST_SESSION_TOKEN,
 		debugDatabasePath = "/nonexistent/debug.db",
 		debugEnablePath = "/nonexistent/debug-flag",
 		experimentsEnablePath = "/nonexistent/exp-flag",
