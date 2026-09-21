@@ -102,23 +102,14 @@ jobs:
           log_path, patch_path = sys.argv[1:]
           log = open(log_path, errors='replace').read().splitlines()
           patch = open(patch_path, errors='replace').read()
-          if patch:
-              files = [line[4:] for line in patch.splitlines() if line.startswith('+++ b/')]
-              text = (
-                  'Files changed by spotlessApply:\n'
-                  + '\n'.join(files)
-                  + '\n--- formatter patch ---\n'
-                  + patch
-              )
-          else:
-              text = (
-                  'spotlessApply produced no patch; the formatter failure tail follows:\n'
-                  + '\n'.join(log[-250:])
-              )
-          for index in range(0, len(text), 6000):
-              chunk = text[index:index + 6000]
+          text = patch[:30000] if patch else (
+              'spotlessApply produced no patch; the formatter failure tail follows:\n'
+              + '\n'.join(log[-250:])
+          )
+          for index in range(0, len(text), 3000):
+              chunk = text[index:index + 3000]
               chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-              print(f'::error title=Spotless formatting failed (part {index // 6000 + 1})::{chunk}')
+              print(f'::error title=Spotless patch first segment (part {index // 3000 + 1})::{chunk}')
           PY
             {
               echo '## Spotless failure and formatter patch'
@@ -137,6 +128,19 @@ jobs:
           path: spotless.patch
           if-no-files-found: ignore
           retention-days: 1
+
+      - name: Expose remaining formatter patch
+        if: failure() && hashFiles('spotless.patch') != ''
+        shell: bash
+        run: |
+          python3 - spotless.patch <<'PY'
+          import sys
+          patch = open(sys.argv[1], errors='replace').read()[30000:60000]
+          for index in range(0, len(patch), 3000):
+              chunk = patch[index:index + 3000]
+              chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::error title=Spotless patch second segment (part {index // 3000 + 1})::{chunk}')
+          PY
 
       # The targeted Gradle tasks below configure the same complete multi-project graph; avoid a
       # separate `projects` daemon invocation so compiler feedback arrives several minutes sooner.
