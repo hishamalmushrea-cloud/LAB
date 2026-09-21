@@ -6,7 +6,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.AssetManager
 import android.util.Log
-import com.itsaky.androidide.plugins.*
+import com.itsaky.androidide.plugins.PluginContext
+import com.itsaky.androidide.plugins.PluginInfo
+import com.itsaky.androidide.plugins.PluginLifecycleListener
+import com.itsaky.androidide.plugins.PluginLogger
+import com.itsaky.androidide.plugins.ResourceManager
+import com.itsaky.androidide.plugins.ServiceRegistry
 import com.itsaky.androidide.plugins.manager.security.PluginIdValidator
 import java.io.File
 import java.io.InputStream
