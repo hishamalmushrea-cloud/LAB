@@ -75,6 +75,48 @@ jobs:
             python3 scripts/validate_repository_structure.py
           fi
 
+      # Run this before the expensive compiler tasks so formatter feedback does not require a full
+      # Android build. On failure, apply the formatter only in the disposable checkout and expose
+      # its exact patch as bounded annotations that remain readable through the checks API.
+      - name: Check source formatting
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! ./gradlew spotlessCheck --no-daemon 2>&1 | tee spotless.log; then
+            ./gradlew spotlessApply --no-daemon >spotless-apply.log 2>&1 || true
+            git diff --no-color >spotless.patch
+            python3 - spotless.log spotless.patch <<'PY'
+          import sys
+          log_path, patch_path = sys.argv[1:]
+          log = open(log_path, errors='replace').read().splitlines()
+          patch = open(patch_path, errors='replace').read()
+          if patch:
+              files = [line[4:] for line in patch.splitlines() if line.startswith('+++ b/')]
+              text = (
+                  'Files changed by spotlessApply:\n'
+                  + '\n'.join(files)
+                  + '\n--- formatter patch ---\n'
+                  + patch
+              )
+          else:
+              text = (
+                  'spotlessApply produced no patch; the formatter failure tail follows:\n'
+                  + '\n'.join(log[-250:])
+              )
+          for index in range(0, len(text), 3000):
+              chunk = text[index:index + 3000]
+              chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::error title=Spotless formatting failed (part {index // 3000 + 1})::{chunk}')
+          PY
+            {
+              echo '## Spotless failure and formatter patch'
+              echo '```diff'
+              cat spotless.patch
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
       # The targeted Gradle tasks below configure the same complete multi-project graph; avoid a
       # separate `projects` daemon invocation so compiler feedback arrives several minutes sooner.
       - name: Run plugin-manager unit tests
@@ -153,26 +195,6 @@ jobs:
               echo '## App integration compilation failure'
               echo '```text'
               tail -n 400 app-compile.log
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-
-      - name: Check source formatting
-        shell: bash
-        run: |
-          set -o pipefail
-          if ! ./gradlew spotlessCheck --stacktrace --no-daemon 2>&1 | tee spotless.log; then
-            ./gradlew spotlessApply --no-daemon >/dev/null 2>&1 || true
-            patch="$(git diff --no-color | tail -n 1200)"
-            escaped="${patch//'%'/'%25'}"
-            escaped="${escaped//$'\r'/'%0D'}"
-            escaped="${escaped//$'\n'/'%0A'}"
-            echo "::error title=Spotless formatting failed::$escaped"
-            {
-              echo '## Spotless failure and formatter patch'
-              echo '```diff'
-              git diff --no-color
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
