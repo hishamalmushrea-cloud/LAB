@@ -36,8 +36,9 @@ class PluginContextImpl(
 	override fun <T> getPluginService(pluginId: String, serviceClass: Class<T>): T? =
 		sharedServices?.get(pluginId, serviceClass)
 
-	override fun isPluginActive(pluginId: String): Boolean =
-		pluginInfoProvider?.invoke(pluginId)?.let { it.isLoaded && it.isEnabled } ?: false
+	override fun isPluginActive(pluginId: String): Boolean {
+		return pluginInfoProvider?.invoke(pluginId)?.let { it.isLoaded && it.isEnabled } ?: false
+	}
 
 	override fun getPluginVersion(pluginId: String): String? =
 		pluginInfoProvider?.invoke(pluginId)?.metadata?.version
