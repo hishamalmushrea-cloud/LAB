@@ -29,8 +29,10 @@ internal object LocalWebServerSecurity {
 		}
 
 	/** HttpOnly keeps documentation JavaScript from reading the capability it is allowed to use. */
-	fun sessionCookie(token: String): String =
-		"$SESSION_COOKIE_NAME=${requireValidSessionToken(token)}; Path=/pr/; HttpOnly; SameSite=Strict"
+	fun sessionCookie(token: String): String {
+		val validatedToken = requireValidSessionToken(token)
+		return "$SESSION_COOKIE_NAME=$validatedToken; Path=/pr/; HttpOnly; SameSite=Strict"
+	}
 
 	fun serverOrigin(port: Int): String = "http://localhost:$port"
 
@@ -76,6 +78,9 @@ internal object LocalWebServerSecurity {
 				host in setOf("localhost", "127.0.0.1", "::1", "[::1]")
 		}.getOrDefault(false)
 
-	private fun constantTimeEquals(left: String, right: String): Boolean =
-		MessageDigest.isEqual(left.toByteArray(Charsets.UTF_8), right.toByteArray(Charsets.UTF_8))
+	private fun constantTimeEquals(left: String, right: String): Boolean {
+		val leftBytes = left.toByteArray(Charsets.UTF_8)
+		val rightBytes = right.toByteArray(Charsets.UTF_8)
+		return MessageDigest.isEqual(leftBytes, rightBytes)
+	}
 }
