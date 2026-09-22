@@ -79,6 +79,28 @@ class AssetManifestTest(unittest.TestCase):
         self.assertEqual(7, self.entry["size"])
         self.assertEqual("b" * 64, self.entry["sha256"])
 
+    def test_keeps_successful_results_when_another_hydration_fails(self):
+        self.entry["size"] = None
+        self.entry["sha256"] = None
+        second = copy.deepcopy(self.entry)
+        second["id"] = "second"
+        second["localPath"] = "assets/second.bin"
+        self.manifest["assets"].append(second)
+        with mock.patch.object(
+            asset_manifest,
+            "_hash_remote",
+            side_effect=[
+                ("example", 7, "b" * 64),
+                asset_manifest.ManifestError("second unavailable"),
+            ],
+        ):
+            with self.assertRaisesRegex(asset_manifest.ManifestError, "second unavailable"):
+                asset_manifest.hydrate_missing(self.manifest, workers=1, retries=1)
+
+        self.assertEqual(7, self.entry["size"])
+        self.assertEqual("b" * 64, self.entry["sha256"])
+        self.assertIsNone(second["size"])
+
     def test_atomic_write_replaces_manifest(self):
         with tempfile.TemporaryDirectory() as directory:
             target = pathlib.Path(directory) / "manifest.json"

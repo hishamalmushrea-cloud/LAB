@@ -27,22 +27,35 @@ jobs:
         run: python3 -m unittest scripts.tests.test_asset_manifest -v
 
       - name: Hydrate missing sizes and SHA-256 digests
+        shell: bash
         run: |
+          set -o pipefail
           mkdir -p generated
-          python3 scripts/asset_manifest.py \
+          if ! python3 scripts/asset_manifest.py \
             config/assets-manifest.json \
             --hydrate-missing \
             --output generated/assets-manifest.json \
             --workers 4 \
-            --retries 3
+            --retries 3 2>&1 | tee generated/hydrate.log; then
+            python3 - generated/hydrate.log <<'PY'
+          import sys
+          text = open(sys.argv[1], errors="replace").read()
+          for index in range(0, len(text), 3000):
+              chunk = text[index:index + 3000]
+              chunk = chunk.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+              print(f"::error title=Asset hydration failure (part {index // 3000 + 1})::{chunk}")
+          PY
+            exit 1
+          fi
 
       - name: Validate generated manifest
         run: python3 scripts/asset_manifest.py generated/assets-manifest.json
 
-      - name: Upload generated manifest
+      - name: Upload generated manifest and hydration log
+        if: always() && hashFiles('generated/assets-manifest.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: hydrated-assets-manifest
-          path: generated/assets-manifest.json
+          path: generated/
           if-no-files-found: error
           retention-days: 7

@@ -166,14 +166,22 @@ def hydrate_missing(document: dict[str, Any], workers: int, retries: int) -> Non
 
     print(f"Hydrating {len(missing)} assets with {workers} workers", flush=True)
     by_id = {entry["id"]: entry for entry in missing}
+    errors: list[str] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {executor.submit(_hash_remote, entry, retries): entry["id"] for entry in missing}
         for future in concurrent.futures.as_completed(futures):
-            asset_id, size, digest = future.result()
+            try:
+                asset_id, size, digest = future.result()
+            except ManifestError as error:
+                errors.append(str(error))
+                print(f"FAILED: {error}", file=sys.stderr, flush=True)
+                continue
             by_id[asset_id]["size"] = size
             by_id[asset_id]["sha256"] = digest
             print(f"{asset_id}: {size} bytes sha256:{digest}", flush=True)
 
+    if errors:
+        raise ManifestError("asset hydration failures:\n" + "\n".join(sorted(errors)))
     validate_manifest(document)
 
 
@@ -213,8 +221,11 @@ def main() -> int:
         if arguments.hydrate_missing:
             if not 1 <= arguments.workers <= 8:
                 raise ManifestError("workers must be between 1 and 8")
-            hydrate_missing(document, arguments.workers, arguments.retries)
-            _atomic_write(arguments.output or arguments.manifest, document)
+            try:
+                hydrate_missing(document, arguments.workers, arguments.retries)
+            finally:
+                # Preserve successful results for diagnosis even when another source is unavailable.
+                _atomic_write(arguments.output or arguments.manifest, document)
         else:
             validate_manifest(document)
     except ManifestError as error:
