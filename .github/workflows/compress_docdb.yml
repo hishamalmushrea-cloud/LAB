@@ -105,31 +105,31 @@ jobs:
         id: checksum
         run: |
           echo "Checking if documentation.db has changed..."
-          
+
           ACCESS_TOKEN="${{ steps.auth_drive.outputs.access_token }}"
-          LAST_MD5_FILE_ID="${{ secrets.DOCUMENTATION_MD5_FILE_ID }}"
-          
-          # Download last_md5 from Drive
-          LAST_MD5=$(curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
-            "https://www.googleapis.com/drive/v3/files/${LAST_MD5_FILE_ID}?alt=media" \
+          LAST_CHECKSUM_FILE_ID="${{ secrets.DOCUMENTATION_MD5_FILE_ID }}"
+
+          # Download last_sha256 from Drive
+          LAST_SHA256=$(curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://www.googleapis.com/drive/v3/files/${LAST_CHECKSUM_FILE_ID}?alt=media" \
             | tr -d '\n')
-          
-          echo "Last md5Checksum: $LAST_MD5"
-          
+
+          echo "Last SHA-256: $LAST_SHA256"
+
           # Compute checksum of the downloaded documentation.db
-          CURRENT_MD5=$(md5sum documentation.db | awk '{print $1}')
-          
-          echo "Current md5Checksum: $CURRENT_MD5"
+          CURRENT_SHA256=$(sha256sum documentation.db | awk '{print $1}')
+
+          echo "Current SHA-256: $CURRENT_SHA256"
 
           # Compare
-          if [ "$CURRENT_MD5" = "$LAST_MD5" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT      
+          if [ "$CURRENT_SHA256" = "$LAST_SHA256" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
             echo "No change detected. Skipping download and compression."
             exit 0
           fi
-          
-          echo "skip=false" >> $GITHUB_OUTPUT      
-          echo "$CURRENT_MD5" > last_md5
+
+          echo "skip=false" >> $GITHUB_OUTPUT
+          echo "$CURRENT_SHA256" > last_sha256
 
       - name: Compress documentation.db with Brotli
         id: brotli
@@ -153,24 +153,24 @@ jobs:
           echo "Original size: $ORIGINAL_SIZE"
           echo "Compressed size: $COMPRESSED_SIZE"
 
-      - name: Upload documentation.db.br and last_md5 to Drive
+      - name: Upload documentation.db.br and last_sha256 to Drive
         id: upload
         if: steps.checksum.outputs.skip != 'true'
         run: |
-          echo "Uploading documentation.db.br and last_md5 to Drive..."
+          echo "Uploading documentation.db.br and last_sha256 to Drive..."
 
           ACCESS_TOKEN="${{ steps.auth_drive.outputs.access_token }}"
-          BR_FILE_ID="${{ secrets.DOCUMENTATION_BR_FILE_ID }}"         
-          BR_MD5_FILE_ID="${{ secrets.DOCUMENTATION_BR_MD5_FILE_ID }}"         
-          LAST_MD5_FILE_ID="${{ secrets.DOCUMENTATION_MD5_FILE_ID }}"
+          BR_FILE_ID="${{ secrets.DOCUMENTATION_BR_FILE_ID }}"
+          BR_CHECKSUM_FILE_ID="${{ secrets.DOCUMENTATION_BR_MD5_FILE_ID }}"
+          LAST_CHECKSUM_FILE_ID="${{ secrets.DOCUMENTATION_MD5_FILE_ID }}"
 
-          # Compute current md5Checksum of documentation.db
-          CURRENT_MD5=$(md5sum documentation.db | awk '{print $1}')
-          echo "$CURRENT_MD5" > last_md5
+          # Compute current SHA-256 of documentation.db
+          CURRENT_SHA256=$(sha256sum documentation.db | awk '{print $1}')
+          echo "$CURRENT_SHA256" > last_sha256
 
-          # Compute md5Checksum of documentation.db.br
-          BR_MD5=$(md5sum documentation.db.br | awk '{print $1}')
-          echo "$BR_MD5" > br_md5
+          # Compute SHA-256 of documentation.db.br
+          BR_SHA256=$(sha256sum documentation.db.br | awk '{print $1}')
+          echo "$BR_SHA256" > br_sha256
 
           # Upload documentation.db.br
           response=$(curl -s -o /dev/null -w "%{http_code}" --fail -X PATCH \
@@ -184,29 +184,29 @@ jobs:
             exit 1
           fi
 
-          # Upload last_md5
+          # Upload last_sha256
           response=$(curl -s -o /dev/null -w "%{http_code}" --fail -X PATCH \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: text/plain" \
-            --data-binary "@last_md5" \
-            "https://www.googleapis.com/upload/drive/v3/files/${LAST_MD5_FILE_ID}?uploadType=media")
-          
+            --data-binary "@last_sha256" \
+            "https://www.googleapis.com/upload/drive/v3/files/${LAST_CHECKSUM_FILE_ID}?uploadType=media")
+
           if [[ "$response" -ne 200 ]]; then
-            echo "Failed upload of documentation.db.md5 with HTTP status $response"
+            echo "Failed upload of documentation.db.sha256 with HTTP status $response"
             exit 1
-          fi          
-          
-          # Upload br_md5
+          fi
+
+          # Upload br_sha256
           response=$(curl -s -o /dev/null -w "%{http_code}" --fail -X PATCH \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: text/plain" \
-            --data-binary "@br_md5" \
-            "https://www.googleapis.com/upload/drive/v3/files/${BR_MD5_FILE_ID}?uploadType=media")
-          
+            --data-binary "@br_sha256" \
+            "https://www.googleapis.com/upload/drive/v3/files/${BR_CHECKSUM_FILE_ID}?uploadType=media")
+
           if [[ "$response" -ne 200 ]]; then
-            echo "Failed upload of documentation.db.br.md5 with HTTP status $response"
+            echo "Failed upload of documentation.db.br.sha256 with HTTP status $response"
             exit 1
-          fi          
-          
+          fi
+
           echo "Upload complete."
 

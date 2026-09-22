@@ -3,7 +3,7 @@
 import com.itsaky.androidide.build.config.BuildConfig
 import com.itsaky.androidide.desugaring.utils.JavaIOReplacements.applyJavaIOReplacements
 import com.itsaky.androidide.plugins.AndroidIDEAssetsPlugin
-import org.adfa.constants.GRADLE_API_NAME_JAR_BR
+import com.itsaky.androidide.plugins.util.DownloadUtils
 import org.adfa.constants.GRADLE_API_NAME_JAR_ZIP
 import org.adfa.constants.GRADLE_DISTRIBUTION_ARCHIVE_NAME
 import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
@@ -15,12 +15,9 @@ import java.io.Closeable
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.net.HttpURLConnection
 import java.net.URI
-import java.net.URL
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
-import java.security.MessageDigest
 import java.util.Properties
 import java.util.zip.CRC32
 import java.util.zip.Deflater
@@ -445,52 +442,6 @@ dependencies {
 	implementation(libs.androidx.lifecycle.process)
 	implementation(libs.androidx.lifecycle.runtime.ktx)
 	coreLibraryDesugaring(libs.desugar.jdk.libs.v215)
-}
-
-tasks.register("downloadDocDb") {
-	doLast {
-		val githubRepo = "appdevforall/OfflineDocumentationTools"
-		val latestReleaseApiUrl = "https://api.github.com/repos/$githubRepo/releases/latest"
-
-		project.logger.lifecycle("Fetching latest release metadata...")
-		try {
-			val jsonResponse = URI(latestReleaseApiUrl).toURL().readText()
-			val jsonObject = JSONObject(jsonResponse)
-
-			val assets = jsonObject.getJSONArray("assets")
-			var assetUrl: String? = null
-			var assetName: String? = null
-
-			for (i in 0 until assets.length()) {
-				val asset = assets.getJSONObject(i)
-				val name = asset.getString("name")
-				if (name.endsWith(".sqlite")) {
-					assetUrl = asset.getString("browser_download_url")
-					assetName = name
-					break
-				}
-			}
-
-			val dbName = "documentation.db"
-			if (assetUrl != null && assetName != null) {
-				val destinationPath =
-					project.rootProject.projectDir
-						.resolve("assets/$dbName")
-						.toPath()
-
-				project.logger.lifecycle("Downloading : $assetUrl as $destinationPath")
-
-				URL(assetUrl).openStream().use { input ->
-					Files.copy(input, destinationPath, StandardCopyOption.REPLACE_EXISTING)
-					println("Download complete: $destinationPath")
-				}
-			} else {
-				project.logger.lifecycle("No `.sqlite` asset found in the latest release.")
-			}
-		} catch (e: Exception) {
-			project.logger.lifecycle("Failed to fetch documentation.db info: ${e.message}")
-		}
-	}
 }
 
 tasks.register("copyPluginApiJarToAssets") {
@@ -1325,305 +1276,107 @@ fun signApk(apkFile: File) {
 	}
 }
 
-val scpServer: String = propOrEnv("SCP_HOST")
-
-// git lfs avoidance
+// Large external inputs stay out of Git, but their byte length, digest, source, ABI and license
+// are reviewed in one tracked manifest. No downloader may trust mutable sidecar checksums.
 data class Asset(
+	val id: String,
 	val localPath: String,
 	val url: String,
 	val remotePath: String,
 	val variant: String,
+	val expectedSize: Long,
+	val sha256Checksum: String,
 )
 
-val debugAssets =
-	listOf(
-		Asset(
-			"assets/android-sdk-arm64-v8a.zip",
-			"https://appdevforall.org/dev-assets/debug/android-sdk-arm64-v8a.zip",
-			"android-sdk-arm64-v8a.zip",
-			"debug",
-		),
-		Asset(
-			"assets/android-sdk-armeabi-v7a.zip",
-			"https://appdevforall.org/dev-assets/debug/android-sdk-armeabi-v7a.zip",
-			"android-sdk-armeabi-v7a.zip",
-			"debug",
-		),
-		Asset(
-			"assets/bootstrap-arm64-v8a.zip",
-			"https://appdevforall.org/dev-assets/debug/bootstrap-arm64-v8a.zip",
-			"bootstrap-arm64-v8a.zip",
-			"debug",
-		),
-		Asset(
-			"assets/bootstrap-armeabi-v7a.zip",
-			"https://appdevforall.org/dev-assets/debug/bootstrap-armeabi-v7a.zip",
-			"bootstrap-armeabi-v7a.zip",
-			"debug",
-		),
-		Asset(
-			"assets/documentation.db",
-			"https://appdevforall.org/dev-assets/debug/documentation.db",
-			"documentation.db",
-			"debug",
-		),
-		Asset(
-			"assets/$GRADLE_DISTRIBUTION_ARCHIVE_NAME",
-			"https://appdevforall.org/dev-assets/debug/$GRADLE_DISTRIBUTION_ARCHIVE_NAME",
-			"$GRADLE_DISTRIBUTION_ARCHIVE_NAME",
-			"debug",
-		),
-		Asset(
-			"assets/$GRADLE_API_NAME_JAR_ZIP",
-			"https://appdevforall.org/dev-assets/debug/$GRADLE_API_NAME_JAR_ZIP",
-			"$GRADLE_API_NAME_JAR_ZIP",
-			"debug",
-		),
-		Asset(
-			"assets/localMvnRepository.zip",
-			"https://appdevforall.org/dev-assets/debug/localMvnRepository.zip",
-			"localMvnRepository.zip",
-			"debug",
-		),
-		Asset(
-			"assets/core.cgt",
-			"https://appdevforall.org/dev-assets/debug/core.cgt",
-			"core.cgt",
-			"debug",
-		),
-	)
+val assetManifestFile = rootProject.file("config/assets-manifest.json")
+val assetManifest = JSONObject(assetManifestFile.readText())
+check(assetManifest.getInt("schemaVersion") == 1) { "Unsupported external asset manifest schema" }
 
-val releaseAssets =
-	listOf(
-		Asset(
-			"assets/release/common/data/common/$GRADLE_DISTRIBUTION_ARCHIVE_NAME.br",
-			"https://appdevforall.org/dev-assets/release/$GRADLE_DISTRIBUTION_ARCHIVE_NAME.br",
-			"$GRADLE_DISTRIBUTION_ARCHIVE_NAME.br",
-			"release",
-		),
-		Asset(
-			"assets/release/common/data/common/$GRADLE_API_NAME_JAR_BR",
-			"https://appdevforall.org/dev-assets/release/$GRADLE_API_NAME_JAR_BR",
-			"$GRADLE_API_NAME_JAR_BR",
-			"release",
-		),
-		Asset(
-			"assets/release/common/data/common/localMvnRepository.zip.br",
-			"https://appdevforall.org/dev-assets/release/localMvnRepository.zip.br",
-			"localMvnRepository.zip.br",
-			"release",
-		),
-		Asset(
-			"assets/release/common/database/documentation.db.br",
-			"https://appdevforall.org/dev-assets/release/documentation.db.br",
-			"documentation.db.br",
-			"release",
-		),
-		Asset(
-			"assets/release/v7/data/common/android-sdk.zip.br",
-			"https://appdevforall.org/dev-assets/release/v7/android-sdk.zip.br",
-			"v7/android-sdk.zip.br",
-			"release",
-		),
-		Asset(
-			"assets/release/v7/data/common/bootstrap.zip.br",
-			"https://appdevforall.org/dev-assets/release/v7/bootstrap.zip.br",
-			"v7/bootstrap.zip.br",
-			"release",
-		),
-		Asset(
-			"assets/release/v8/data/common/android-sdk.zip.br",
-			"https://appdevforall.org/dev-assets/release/v8/android-sdk.zip.br",
-			"v8/android-sdk.zip.br",
-			"release",
-		),
-		Asset(
-			"assets/release/v8/data/common/bootstrap.zip.br",
-			"https://appdevforall.org/dev-assets/release/v8/bootstrap.zip.br",
-			"v8/bootstrap.zip.br",
-			"release",
-		),
-		Asset(
-			"assets/release/common/data/common/core.cgt.br",
-			"https://appdevforall.org/dev-assets/release/core.cgt.br",
-			"core.cgt.br",
-			"release",
-		),
-	)
+fun manifestAssets(variant: String): List<Asset> {
+	val root = rootProject.projectDir.toPath().toAbsolutePath().normalize()
+	val entries = assetManifest.getJSONArray("assets")
+	return (0 until entries.length())
+		.map { entries.getJSONObject(it) }
+		.filter { it.getString("variant") == variant }
+		.map { entry ->
+			val id = entry.getString("id")
+			val localPath = entry.getString("localPath")
+			val remotePath = entry.getString("remotePath")
+			fun requireContainedPath(value: String, field: String) {
+				val resolved = root.resolve(value).normalize()
+				check(value.isNotBlank() && '\\' !in value && resolved != root && resolved.startsWith(root)) {
+					"Asset $id has unsafe $field: $value"
+				}
+			}
+			requireContainedPath(localPath, "localPath")
+			requireContainedPath(remotePath, "remotePath")
 
-fun assetsBatch(
-	projectDir: File,
-	project: Project,
-	variant: String,
-) {
-	if (isCiCd) {
-		val tmpDir = File(projectDir, ".tmp/assets")
-		tmpDir.mkdirs()
-		project.logger.lifecycle("Downloading $variant assets → ${tmpDir.absolutePath}")
-		@Suppress("DEPRECATION")
-		project.exec {
-			commandLine(
-				"scp",
-				"-r",
-				"$scpServer:public_html/dev-assets/$variant/",
-				tmpDir.absolutePath,
+			val uri = URI(entry.getString("url"))
+			check(uri.scheme == "https" && uri.host != null && uri.userInfo == null) {
+				"Asset $id must use an HTTPS URL without user info"
+			}
+			val urlPath = uri.path.lowercase()
+			check("/releases/latest" !in urlPath && "/latest/download" !in urlPath) {
+				"Asset $id must pin a release instead of using latest"
+			}
+			val expectedSize = entry.getLong("size")
+			val sha256 = entry.getString("sha256")
+			check(expectedSize > 0 && sha256.matches(Regex("[0-9a-f]{64}"))) {
+				"Asset $id has an invalid size or SHA-256 digest"
+			}
+
+			Asset(
+				id = id,
+				localPath = localPath,
+				url = uri.toString(),
+				remotePath = remotePath,
+				variant = variant,
+				expectedSize = expectedSize,
+				sha256Checksum = sha256,
 			)
 		}
-		project.logger.lifecycle("SCP batch downloaded $variant assets → ${tmpDir.absolutePath}")
-	}
 }
 
-fun stagedFileFor(
-	asset: Asset,
-	projectDir: File,
-): File {
-	val variantDir = File(projectDir, ".tmp/assets/${asset.variant}")
-	return File(variantDir, asset.remotePath)
-}
-
-fun stagedChecksumFor(
-	asset: Asset,
-	projectDir: File,
-): File {
-	val variantDir = File(projectDir, ".tmp/assets/${asset.variant}")
-	return File(variantDir, asset.remotePath + ".md5")
-}
-
-fun assetsFileDownload(
-	asset: Asset,
-	target: File,
-) {
-	if (isCiCd) {
-		val stagedFile = stagedFileFor(asset, rootProject.projectDir)
-		if (!stagedFile.exists()) {
-			throw GradleException("Staged file not found: ${stagedFile.absolutePath}")
-		}
-		target.parentFile.mkdirs()
-		stagedFile.copyTo(target, overwrite = true)
-		project.logger.lifecycle("Copied staged ${stagedFile.absolutePath} → ${target.absolutePath}")
-	} else {
-		val url = URL(asset.url)
-		val conn = url.openConnection() as HttpURLConnection
-		conn.requestMethod = "GET"
-		conn.setRequestProperty(
-			"User-Agent",
-			"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-		)
-		conn.setRequestProperty("Accept", "*/*")
-		conn.setRequestProperty("Connection", "keep-alive")
-		conn.instanceFollowRedirects = true
-		conn.connectTimeout = 10_000
-		conn.readTimeout = 60_000
-
-		try {
-			val status = conn.responseCode
-			if (status == HttpURLConnection.HTTP_OK) {
-				conn.inputStream.use { input ->
-					target.outputStream().use { output ->
-						input.copyTo(output)
-					}
-				}
-				project.logger.lifecycle("Downloaded ${asset.url} → ${target.absolutePath}")
-			} else {
-				throw GradleException("Failed to download ${asset.url} (HTTP $status: ${conn.responseMessage})")
-			}
-		} finally {
-			conn.disconnect()
-		}
-	}
-}
-
-fun fileMd5(file: File): String {
-	val digest = MessageDigest.getInstance("MD5")
-	file.inputStream().use { input ->
-		val buffer = ByteArray(8192)
-		var read: Int
-		while (input.read(buffer).also { read = it } > 0) {
-			digest.update(buffer, 0, read)
-		}
-	}
-	return digest.digest().joinToString("") { "%02x".format(it) }
-}
-
-fun assetsFileChecksum(asset: Asset): String {
-	val checksum =
-		if (isCiCd) {
-			val stagedChecksum = stagedChecksumFor(asset, rootProject.projectDir)
-			if (!stagedChecksum.exists()) {
-				throw GradleException("Failed to find checksum in ${stagedChecksum.absolutePath}")
-			}
-			stagedChecksum.readText().trim()
-		} else {
-			val checksumUrl = asset.url + ".md5"
-			val conn = URL(checksumUrl).openConnection() as HttpURLConnection
-			conn.requestMethod = "GET"
-			conn.setRequestProperty("User-Agent", "Mozilla/5.0")
-			conn.instanceFollowRedirects = true
-			conn.connectTimeout = 10_000
-			conn.readTimeout = 10_000
-
-			try {
-				val status = conn.responseCode
-				if (status != HttpURLConnection.HTTP_OK) {
-					throw GradleException("Failed to fetch checksum from $checksumUrl (HTTP $status: ${conn.responseMessage})")
-				}
-				conn.inputStream.bufferedReader().use { it.readText().trim() }
-			} finally {
-				conn.disconnect()
-			}
-		}
-
-	if (!checksum.matches(Regex("^[a-fA-F0-9]{32}$"))) {
-		throw GradleException(
-			"Invalid MD5 checksum for ${asset.remotePath} (got: '${checksum.take(
-				50,
-			)}') - the server may be returning an error page instead of the checksum",
-		)
-	}
-	return checksum.lowercase()
-}
+val debugAssets = manifestAssets("debug")
+val releaseAssets = manifestAssets("release")
 
 fun assetsDownload(
 	assets: List<Asset>,
 	projectDir: File,
 ) {
 	assets.forEach { asset ->
-		val target = File(projectDir, asset.localPath)
-		target.parentFile.mkdirs()
-
-		val remoteChecksum = assetsFileChecksum(asset)
-
-		if (target.exists() && fileMd5(target) == remoteChecksum) {
-			project.logger.lifecycle("File ${asset.localPath} is up-to-date (checksum matches).")
-			return@forEach
-		}
-
-		project.logger.lifecycle("Downloading ${asset.url} → ${asset.localPath}")
-		assetsFileDownload(asset, target)
-
-		val newChecksum = fileMd5(target)
-		if (newChecksum != remoteChecksum) {
-			throw GradleException(
-				"Checksum mismatch for ${asset.localPath} (expected $remoteChecksum, got $newChecksum)",
-			)
-		}
+		DownloadUtils.downloadFile(
+			url = URI(asset.url).toURL(),
+			destination = File(projectDir, asset.localPath),
+			sha256Checksum = asset.sha256Checksum,
+			expectedSize = asset.expectedSize,
+			logger = project.logger,
+		)
 	}
 }
 
 tasks.register("assetsDownloadDebug") {
 	group = "setup"
 	description = "Download and verify debug assets"
-	doLast {
-		assetsBatch(rootProject.projectDir, project, "debug")
-		assetsDownload(debugAssets, rootProject.projectDir)
-	}
+	inputs.file(assetManifestFile)
+	doLast { assetsDownload(debugAssets, rootProject.projectDir) }
 }
 
 tasks.register("assetsDownloadRelease") {
 	group = "setup"
 	description = "Download and verify release assets"
-	doLast {
-		assetsBatch(rootProject.projectDir, project, "release")
-		assetsDownload(releaseAssets, rootProject.projectDir)
-	}
+	inputs.file(assetManifestFile)
+	doLast { assetsDownload(releaseAssets, rootProject.projectDir) }
+}
+
+// Kept as a focused setup task for developers who only need the documentation database. Its
+// release URL, byte length and digest are pinned by the same manifest as every other build asset.
+tasks.register("downloadDocDb") {
+	group = "setup"
+	description = "Download and verify the pinned offline documentation database"
+	inputs.file(assetManifestFile)
+	val documentation = debugAssets.single { it.id == "offline-documentation-db" }
+	outputs.file(rootProject.file(documentation.localPath))
+	outputs.upToDateWhen { false }
+	doLast { assetsDownload(listOf(documentation), rootProject.projectDir) }
 }
