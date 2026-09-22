@@ -1,25 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  The IDE's only legitimate cleartext peer is the loopback preview/build server it starts itself
-  (see LocalWebServerSecurity, which binds to loopback and rejects non-loopback authorities), plus
-  the emulator host aliases used when a developer runs the IDE under an emulator.
-
-  Everything else - asset downloads, documentation, plugin registries - must be HTTPS, so the base
-  configuration denies cleartext instead of permitting it app-wide. Previously both this base
-  configuration and android:usesCleartextTraffic="true" allowed plaintext to any host, which made
-  the manifest's HTTPS-only asset contract unenforceable at the transport layer.
--->
+<!-- The IDE's only legitimate cleartext peer is the loopback preview/build server it starts itself (see LocalWebServerSecurity,
+	which binds to loopback and rejects non-loopback authorities), plus the emulator host aliases used when a developer runs
+	the IDE under an emulator. Everything else - asset downloads, documentation, plugin registries - must be HTTPS, so the base
+	configuration denies cleartext instead of permitting it app-wide. Previously both this base configuration and android:usesCleartextTraffic="true"
+	allowed plaintext to any host, which made the manifest's HTTPS-only asset contract unenforceable at the transport layer. -->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">localhost</domain>
-        <domain includeSubdomains="true">127.0.0.1</domain>
-        <!-- Host loopback aliases for the Android and Genymotion emulators. -->
-        <domain includeSubdomains="true">10.0.2.2</domain>
-        <domain includeSubdomains="true">10.0.3.2</domain>
-    </domain-config>
-    <base-config cleartextTrafficPermitted="false">
-        <trust-anchors>
-            <certificates src="system" />
-        </trust-anchors>
-    </base-config>
+	<domain-config cleartextTrafficPermitted="true">
+		<domain includeSubdomains="true">localhost</domain>
+		<domain includeSubdomains="true">127.0.0.1</domain>
+		<!-- Host loopback aliases for the Android and Genymotion emulators. -->
+		<domain includeSubdomains="true">10.0.2.2</domain>
+		<domain includeSubdomains="true">10.0.3.2</domain>
+	</domain-config>
+	<base-config cleartextTrafficPermitted="false">
+		<trust-anchors>
+			<certificates src="system" />
+		</trust-anchors>
+	</base-config>
 </network-security-config>
