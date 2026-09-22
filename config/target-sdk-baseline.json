@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "targetSdk": 28,
+  "comment": "Accepted target-SDK migration blockers. Shrink this list; never grow it. Regenerate with scripts/target_sdk_readiness.py --write-baseline only when a reviewer has agreed that a new entry is unavoidable.",
+  "accepted": [
+    {
+      "key": "broad-read-external-storage:app/src/main/AndroidManifest.xml:uses-permission",
+      "id": "broad-read-external-storage",
+      "api": 33,
+      "location": "app/src/main/AndroidManifest.xml:uses-permission",
+      "summary": "READ_EXTERNAL_STORAGE stops being granted at API 33; declare maxSdkVersion and move media access to the granular permissions."
+    },
+    {
+      "key": "cleartext-traffic:app/src/main/AndroidManifest.xml:application",
+      "id": "cleartext-traffic",
+      "api": 28,
+      "location": "app/src/main/AndroidManifest.xml:application",
+      "summary": "usesCleartextTraffic=true widens the network security policy; scope it to the loopback build server in network_security_config instead."
+    },
+    {
+      "key": "legacy-external-storage:app/src/main/AndroidManifest.xml:application",
+      "id": "legacy-external-storage",
+      "api": 29,
+      "location": "app/src/main/AndroidManifest.xml:application",
+      "summary": "requestLegacyExternalStorage is ignored from API 30; project files need scoped storage, SAF grants or an app-private workspace."
+    },
+    {
+      "key": "manage-external-storage:app/src/main/AndroidManifest.xml:uses-permission",
+      "id": "manage-external-storage",
+      "api": 30,
+      "location": "app/src/main/AndroidManifest.xml:uses-permission",
+      "summary": "MANAGE_EXTERNAL_STORAGE requires a Play policy exemption and a user-granted special access screen once the target reaches 30."
+    },
+    {
+      "key": "missing-foreground-service-type:app/src/main/AndroidManifest.xml:service:.services.builder.GradleBuildService",
+      "id": "missing-foreground-service-type",
+      "api": 34,
+      "location": "app/src/main/AndroidManifest.xml:service:.services.builder.GradleBuildService",
+      "summary": "This service calls startForeground but declares no foregroundServiceType; API 34 throws MissingForegroundServiceTypeException."
+    }
+  ]
+}
