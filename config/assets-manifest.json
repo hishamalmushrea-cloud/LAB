@@ -1,0 +1,427 @@
+{
+  "schemaVersion": 1,
+  "manifestVersion": "2026.09.22.1",
+  "inventoryDate": "2026-09-22",
+  "assets": [
+    {
+      "id": "android-sdk-arm64-v8a",
+      "variant": "debug",
+      "localPath": "assets/android-sdk-35-2-aarch64.cgt",
+      "remotePath": "android-sdk-35-2-aarch64.cgt",
+      "url": "https://appdevforall.org/dev-assets/debug/android-sdk-35-2-aarch64.cgt",
+      "version": "35-2",
+      "abi": [
+        "arm64-v8a"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "LicenseRef-Android-SDK",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "android-sdk-armeabi-v7a",
+      "variant": "debug",
+      "localPath": "assets/android-sdk-35-2-arm.cgt",
+      "remotePath": "android-sdk-35-2-arm.cgt",
+      "url": "https://appdevforall.org/dev-assets/debug/android-sdk-35-2-arm.cgt",
+      "version": "35-2",
+      "abi": [
+        "armeabi-v7a"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "LicenseRef-Android-SDK",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "bootstrap-arm64-v8a",
+      "variant": "debug",
+      "localPath": "assets/bootstrap-aarch64.cgt",
+      "remotePath": "bootstrap-aarch64.cgt",
+      "url": "https://appdevforall.org/dev-assets/debug/bootstrap-aarch64.cgt",
+      "version": "asset-set-2026-09-22",
+      "abi": [
+        "arm64-v8a"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "LicenseRef-Mixed-Upstream",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "bootstrap-armeabi-v7a",
+      "variant": "debug",
+      "localPath": "assets/bootstrap-arm.cgt",
+      "remotePath": "bootstrap-arm.cgt",
+      "url": "https://appdevforall.org/dev-assets/debug/bootstrap-arm.cgt",
+      "version": "asset-set-2026-09-22",
+      "abi": [
+        "armeabi-v7a"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "LicenseRef-Mixed-Upstream",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "offline-documentation-db",
+      "variant": "debug",
+      "localPath": "assets/documentation.db",
+      "remotePath": "documentation.db",
+      "url": "https://github.com/appdevforall/OfflineDocumentationTools/releases/download/db-2025-07-16b/documentation-db-2025-07-16b.sqlite",
+      "version": "db-2025-07-16b",
+      "abi": [
+        "common"
+      ],
+      "size": 274489344,
+      "sha256": "b9ee06f39b5eb7275bdf6e2796bc751044b8360d7dc141452f1dfdc150dbf9c1",
+      "source": {
+        "project": "https://github.com/appdevforall/OfflineDocumentationTools",
+        "revision": "db-2025-07-16b"
+      },
+      "license": {
+        "id": "LicenseRef-Mixed-Upstream",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "gradle-distribution",
+      "variant": "debug",
+      "localPath": "assets/gradle-9.6.1-bin.zip",
+      "remotePath": "gradle-9.6.1-bin.zip",
+      "url": "https://appdevforall.org/dev-assets/debug/gradle-9.6.1-bin.zip",
+      "version": "9.6.1",
+      "abi": [
+        "common"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/gradle/gradle",
+        "revision": "v9.6.1"
+      },
+      "license": {
+        "id": "Apache-2.0",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "gradle-api",
+      "variant": "debug",
+      "localPath": "assets/gradle-api-9.6.1.jar.zip",
+      "remotePath": "gradle-api-9.6.1.jar.zip",
+      "url": "https://appdevforall.org/dev-assets/debug/gradle-api-9.6.1.jar.zip",
+      "version": "9.6.1",
+      "abi": [
+        "common"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/gradle/gradle",
+        "revision": "v9.6.1"
+      },
+      "license": {
+        "id": "Apache-2.0",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "local-maven-repository",
+      "variant": "debug",
+      "localPath": "assets/localMvnRepository.cgt",
+      "remotePath": "localMvnRepository.cgt",
+      "url": "https://appdevforall.org/dev-assets/debug/localMvnRepository.cgt",
+      "version": "asset-set-2026-09-22",
+      "abi": [
+        "common"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "LicenseRef-Mixed-Upstream",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "core-tools",
+      "variant": "debug",
+      "localPath": "assets/core.cgt",
+      "remotePath": "core.cgt",
+      "url": "https://appdevforall.org/dev-assets/debug/core.cgt",
+      "version": "asset-set-2026-09-22",
+      "abi": [
+        "common"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "GPL-3.0-only",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "gradle-distribution-brotli",
+      "variant": "release",
+      "localPath": "assets/release/gradle-9.6.1-bin.zip.br",
+      "remotePath": "gradle-9.6.1-bin.zip.br",
+      "url": "https://appdevforall.org/dev-assets/release/gradle-9.6.1-bin.zip.br",
+      "version": "9.6.1",
+      "abi": [
+        "common"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/gradle/gradle",
+        "revision": "v9.6.1"
+      },
+      "license": {
+        "id": "Apache-2.0",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "gradle-api-brotli",
+      "variant": "release",
+      "localPath": "assets/release/gradle-api-9.6.1.jar.br",
+      "remotePath": "gradle-api-9.6.1.jar.br",
+      "url": "https://appdevforall.org/dev-assets/release/gradle-api-9.6.1.jar.br",
+      "version": "9.6.1",
+      "abi": [
+        "common"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/gradle/gradle",
+        "revision": "v9.6.1"
+      },
+      "license": {
+        "id": "Apache-2.0",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "local-maven-repository-brotli",
+      "variant": "release",
+      "localPath": "assets/release/localMvnRepository.cgt.br",
+      "remotePath": "localMvnRepository.cgt.br",
+      "url": "https://appdevforall.org/dev-assets/release/localMvnRepository.cgt.br",
+      "version": "asset-set-2026-09-22",
+      "abi": [
+        "common"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "LicenseRef-Mixed-Upstream",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "offline-documentation-db-brotli",
+      "variant": "release",
+      "localPath": "assets/release/offline-docs.db.br",
+      "remotePath": "offline-docs.db.br",
+      "url": "https://appdevforall.org/dev-assets/release/offline-docs.db.br",
+      "version": "db-2025-07-16b",
+      "abi": [
+        "common"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/OfflineDocumentationTools",
+        "revision": "db-2025-07-16b"
+      },
+      "license": {
+        "id": "LicenseRef-Mixed-Upstream",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "android-sdk-armeabi-v7a-brotli",
+      "variant": "release",
+      "localPath": "assets/release/android-sdk-35-2-arm.cgt.br",
+      "remotePath": "android-sdk-35-2-arm.cgt.br",
+      "url": "https://appdevforall.org/dev-assets/release/android-sdk-35-2-arm.cgt.br",
+      "version": "35-2",
+      "abi": [
+        "armeabi-v7a"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "LicenseRef-Android-SDK",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "bootstrap-armeabi-v7a-brotli",
+      "variant": "release",
+      "localPath": "assets/release/bootstrap-arm.cgt.br",
+      "remotePath": "bootstrap-arm.cgt.br",
+      "url": "https://appdevforall.org/dev-assets/release/bootstrap-arm.cgt.br",
+      "version": "asset-set-2026-09-22",
+      "abi": [
+        "armeabi-v7a"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "LicenseRef-Mixed-Upstream",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "android-sdk-arm64-v8a-brotli",
+      "variant": "release",
+      "localPath": "assets/release/android-sdk-35-2-aarch64.cgt.br",
+      "remotePath": "android-sdk-35-2-aarch64.cgt.br",
+      "url": "https://appdevforall.org/dev-assets/release/android-sdk-35-2-aarch64.cgt.br",
+      "version": "35-2",
+      "abi": [
+        "arm64-v8a"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "LicenseRef-Android-SDK",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "bootstrap-arm64-v8a-brotli",
+      "variant": "release",
+      "localPath": "assets/release/bootstrap-aarch64.cgt.br",
+      "remotePath": "bootstrap-aarch64.cgt.br",
+      "url": "https://appdevforall.org/dev-assets/release/bootstrap-aarch64.cgt.br",
+      "version": "asset-set-2026-09-22",
+      "abi": [
+        "arm64-v8a"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "LicenseRef-Mixed-Upstream",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "core-tools-brotli",
+      "variant": "release",
+      "localPath": "assets/release/core.cgt.br",
+      "remotePath": "core.cgt.br",
+      "url": "https://appdevforall.org/dev-assets/release/core.cgt.br",
+      "version": "asset-set-2026-09-22",
+      "abi": [
+        "common"
+      ],
+      "size": null,
+      "sha256": null,
+      "source": {
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
+      },
+      "license": {
+        "id": "GPL-3.0-only",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "jdi-support",
+      "variant": "build-tooling",
+      "localPath": ".gradle/caches/androidide/jdi-support.jar",
+      "remotePath": "jdi-support.jar",
+      "url": "https://github.com/appdevforall/oj-libjdwp/releases/download/v2025-05-19-a582a55/jdi-support.jar",
+      "version": "v2025-05-19-a582a55",
+      "abi": [
+        "host"
+      ],
+      "size": 587255,
+      "sha256": "1ae447d08bd40b20abf270079cf59919d8575a2e8657fa936faf18678fe1ccc5",
+      "source": {
+        "project": "https://github.com/appdevforall/oj-libjdwp",
+        "revision": "v2025-05-19-a582a55"
+      },
+      "license": {
+        "id": "GPL-2.0-with-classpath-exception",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    },
+    {
+      "id": "kotlin-analysis-api",
+      "variant": "build-tooling",
+      "localPath": ".gradle/caches/androidide/analysis-api.jar",
+      "remotePath": "analysis-api-standalone-embeddable-for-ide-2.3.255-SNAPSHOT.jar",
+      "url": "https://github.com/appdevforall/kotlin-android/releases/download/v2.3.255-4d3c8ea/analysis-api-standalone-embeddable-for-ide-2.3.255-SNAPSHOT.jar",
+      "version": "v2.3.255-4d3c8ea",
+      "abi": [
+        "host"
+      ],
+      "size": 199655918,
+      "sha256": "418da363aaa6ebea3f234042cf91444de751bcf8264c4eb9cde38c763a79b3a5",
+      "source": {
+        "project": "https://github.com/appdevforall/kotlin-android",
+        "revision": "v2.3.255-4d3c8ea"
+      },
+      "license": {
+        "id": "Apache-2.0",
+        "reference": "docs/assets/ASSET_LICENSES.md"
+      }
+    }
+  ]
+}

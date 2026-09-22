@@ -1,0 +1,48 @@
+name: Inventory external assets
+
+on:
+  push:
+    paths:
+      - ".github/workflows/asset_manifest_inventory.yml"
+      - "config/assets-manifest.json"
+      - "scripts/asset_manifest.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: asset-manifest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hydrate-and-validate:
+    name: Hydrate and validate SHA-256 manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Test manifest tooling
+        run: python3 -m unittest scripts.tests.test_asset_manifest -v
+
+      - name: Hydrate missing sizes and SHA-256 digests
+        run: |
+          mkdir -p generated
+          python3 scripts/asset_manifest.py \
+            config/assets-manifest.json \
+            --hydrate-missing \
+            --output generated/assets-manifest.json \
+            --workers 4 \
+            --retries 3
+
+      - name: Validate generated manifest
+        run: python3 scripts/asset_manifest.py generated/assets-manifest.json
+
+      - name: Upload generated manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: hydrated-assets-manifest
+          path: generated/assets-manifest.json
+          if-no-files-found: error
+          retention-days: 7
