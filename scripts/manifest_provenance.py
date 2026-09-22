@@ -5,9 +5,9 @@ The manifest already fails closed on size and SHA-256 mismatches, but a digest
 only proves that the bytes match what the manifest says; it does not prove who
 authored the manifest. This tool adds that missing provenance link:
 
-    keygen   create a release signing seed and its public key
-    sign     write a detached signature over the canonical manifest bytes
-    verify   check a detached signature against a trusted public key
+	keygen   create a release signing seed and its public key
+	sign     write a detached signature over the canonical manifest bytes
+	verify   check a detached signature against a trusted public key
 
 Canonicalisation is deliberately boring: UTF-8 JSON, sorted keys, compact
 separators, no trailing newline. Formatting changes to the tracked manifest
