@@ -1293,7 +1293,11 @@ val assetManifest = JSONObject(assetManifestFile.readText())
 check(assetManifest.getInt("schemaVersion") == 1) { "Unsupported external asset manifest schema" }
 
 fun manifestAssets(variant: String): List<Asset> {
-	val root = rootProject.projectDir.toPath().toAbsolutePath().normalize()
+	val root =
+		rootProject.projectDir
+			.toPath()
+			.toAbsolutePath()
+			.normalize()
 	val entries = assetManifest.getJSONArray("assets")
 	return (0 until entries.length())
 		.map { entries.getJSONObject(it) }
@@ -1302,7 +1306,11 @@ fun manifestAssets(variant: String): List<Asset> {
 			val id = entry.getString("id")
 			val localPath = entry.getString("localPath")
 			val remotePath = entry.getString("remotePath")
-			fun requireContainedPath(value: String, field: String) {
+
+			fun requireContainedPath(
+				value: String,
+				field: String,
+			) {
 				val resolved = root.resolve(value).normalize()
 				check(value.isNotBlank() && '\\' !in value && resolved != root && resolved.startsWith(root)) {
 					"Asset $id has unsafe $field: $value"
