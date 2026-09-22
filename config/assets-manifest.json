@@ -6,9 +6,9 @@
     {
       "id": "android-sdk-arm64-v8a",
       "variant": "debug",
-      "localPath": "assets/android-sdk-35-2-aarch64.cgt",
-      "remotePath": "android-sdk-35-2-aarch64.cgt",
-      "url": "https://appdevforall.org/dev-assets/debug/android-sdk-35-2-aarch64.cgt",
+      "localPath": "assets/android-sdk-arm64-v8a.zip",
+      "remotePath": "android-sdk-arm64-v8a.zip",
+      "url": "https://appdevforall.org/dev-assets/debug/android-sdk-arm64-v8a.zip",
       "version": "35-2",
       "abi": [
         "arm64-v8a"
@@ -27,9 +27,9 @@
     {
       "id": "android-sdk-armeabi-v7a",
       "variant": "debug",
-      "localPath": "assets/android-sdk-35-2-arm.cgt",
-      "remotePath": "android-sdk-35-2-arm.cgt",
-      "url": "https://appdevforall.org/dev-assets/debug/android-sdk-35-2-arm.cgt",
+      "localPath": "assets/android-sdk-armeabi-v7a.zip",
+      "remotePath": "android-sdk-armeabi-v7a.zip",
+      "url": "https://appdevforall.org/dev-assets/debug/android-sdk-armeabi-v7a.zip",
       "version": "35-2",
       "abi": [
         "armeabi-v7a"
@@ -48,9 +48,9 @@
     {
       "id": "bootstrap-arm64-v8a",
       "variant": "debug",
-      "localPath": "assets/bootstrap-aarch64.cgt",
-      "remotePath": "bootstrap-aarch64.cgt",
-      "url": "https://appdevforall.org/dev-assets/debug/bootstrap-aarch64.cgt",
+      "localPath": "assets/bootstrap-arm64-v8a.zip",
+      "remotePath": "bootstrap-arm64-v8a.zip",
+      "url": "https://appdevforall.org/dev-assets/debug/bootstrap-arm64-v8a.zip",
       "version": "asset-set-2026-09-22",
       "abi": [
         "arm64-v8a"
@@ -69,9 +69,9 @@
     {
       "id": "bootstrap-armeabi-v7a",
       "variant": "debug",
-      "localPath": "assets/bootstrap-arm.cgt",
-      "remotePath": "bootstrap-arm.cgt",
-      "url": "https://appdevforall.org/dev-assets/debug/bootstrap-arm.cgt",
+      "localPath": "assets/bootstrap-armeabi-v7a.zip",
+      "remotePath": "bootstrap-armeabi-v7a.zip",
+      "url": "https://appdevforall.org/dev-assets/debug/bootstrap-armeabi-v7a.zip",
       "version": "asset-set-2026-09-22",
       "abi": [
         "armeabi-v7a"
@@ -118,8 +118,8 @@
       "abi": [
         "common"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 134545281,
+      "sha256": "92ddb5e289c66c5f37baa64bfaa848ca645436adaddcfd9e93150e4712c9df4a",
       "source": {
         "project": "https://github.com/gradle/gradle",
         "revision": "v9.6.1"
@@ -139,8 +139,8 @@
       "abi": [
         "common"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 46900175,
+      "sha256": "e91de1e0ae8e10ca94fbcdf7b07acf393357e5ded1fab7f012d8282274b16950",
       "source": {
         "project": "https://github.com/gradle/gradle",
         "revision": "v9.6.1"
@@ -153,9 +153,9 @@
     {
       "id": "local-maven-repository",
       "variant": "debug",
-      "localPath": "assets/localMvnRepository.cgt",
-      "remotePath": "localMvnRepository.cgt",
-      "url": "https://appdevforall.org/dev-assets/debug/localMvnRepository.cgt",
+      "localPath": "assets/localMvnRepository.zip",
+      "remotePath": "localMvnRepository.zip",
+      "url": "https://appdevforall.org/dev-assets/debug/localMvnRepository.zip",
       "version": "asset-set-2026-09-22",
       "abi": [
         "common"
@@ -181,8 +181,8 @@
       "abi": [
         "common"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 1626091,
+      "sha256": "14746ce50cefd7824709b46a1086568a50e1f0f4566a71efd52854e9a8f38687",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
@@ -195,15 +195,15 @@
     {
       "id": "gradle-distribution-brotli",
       "variant": "release",
-      "localPath": "assets/release/gradle-9.6.1-bin.zip.br",
+      "localPath": "assets/release/common/data/common/gradle-9.6.1-bin.zip.br",
       "remotePath": "gradle-9.6.1-bin.zip.br",
       "url": "https://appdevforall.org/dev-assets/release/gradle-9.6.1-bin.zip.br",
       "version": "9.6.1",
       "abi": [
         "common"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 61199108,
+      "sha256": "7271f18b3d50b5d81509a92c990fa1f114ebdd780cbfdae183e170f04ff658be",
       "source": {
         "project": "https://github.com/gradle/gradle",
         "revision": "v9.6.1"
@@ -216,15 +216,15 @@
     {
       "id": "gradle-api-brotli",
       "variant": "release",
-      "localPath": "assets/release/gradle-api-9.6.1.jar.br",
+      "localPath": "assets/release/common/data/common/gradle-api-9.6.1.jar.br",
       "remotePath": "gradle-api-9.6.1.jar.br",
       "url": "https://appdevforall.org/dev-assets/release/gradle-api-9.6.1.jar.br",
       "version": "9.6.1",
       "abi": [
         "common"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 29524212,
+      "sha256": "658f53aee2c9f2128afe4048ea2f22762db80bb92c42e36d02e33be3616d77ed",
       "source": {
         "project": "https://github.com/gradle/gradle",
         "revision": "v9.6.1"
@@ -237,9 +237,9 @@
     {
       "id": "local-maven-repository-brotli",
       "variant": "release",
-      "localPath": "assets/release/localMvnRepository.cgt.br",
-      "remotePath": "localMvnRepository.cgt.br",
-      "url": "https://appdevforall.org/dev-assets/release/localMvnRepository.cgt.br",
+      "localPath": "assets/release/common/data/common/localMvnRepository.zip.br",
+      "remotePath": "localMvnRepository.zip.br",
+      "url": "https://appdevforall.org/dev-assets/release/localMvnRepository.zip.br",
       "version": "asset-set-2026-09-22",
       "abi": [
         "common"
@@ -258,9 +258,9 @@
     {
       "id": "offline-documentation-db-brotli",
       "variant": "release",
-      "localPath": "assets/release/offline-docs.db.br",
-      "remotePath": "offline-docs.db.br",
-      "url": "https://appdevforall.org/dev-assets/release/offline-docs.db.br",
+      "localPath": "assets/release/common/database/documentation.db.br",
+      "remotePath": "documentation.db.br",
+      "url": "https://appdevforall.org/dev-assets/release/documentation.db.br",
       "version": "db-2025-07-16b",
       "abi": [
         "common"
@@ -279,9 +279,9 @@
     {
       "id": "android-sdk-armeabi-v7a-brotli",
       "variant": "release",
-      "localPath": "assets/release/android-sdk-35-2-arm.cgt.br",
-      "remotePath": "android-sdk-35-2-arm.cgt.br",
-      "url": "https://appdevforall.org/dev-assets/release/android-sdk-35-2-arm.cgt.br",
+      "localPath": "assets/release/v7/data/common/android-sdk.zip.br",
+      "remotePath": "v7/android-sdk.zip.br",
+      "url": "https://appdevforall.org/dev-assets/release/v7/android-sdk.zip.br",
       "version": "35-2",
       "abi": [
         "armeabi-v7a"
@@ -300,9 +300,9 @@
     {
       "id": "bootstrap-armeabi-v7a-brotli",
       "variant": "release",
-      "localPath": "assets/release/bootstrap-arm.cgt.br",
-      "remotePath": "bootstrap-arm.cgt.br",
-      "url": "https://appdevforall.org/dev-assets/release/bootstrap-arm.cgt.br",
+      "localPath": "assets/release/v7/data/common/bootstrap.zip.br",
+      "remotePath": "v7/bootstrap.zip.br",
+      "url": "https://appdevforall.org/dev-assets/release/v7/bootstrap.zip.br",
       "version": "asset-set-2026-09-22",
       "abi": [
         "armeabi-v7a"
@@ -321,9 +321,9 @@
     {
       "id": "android-sdk-arm64-v8a-brotli",
       "variant": "release",
-      "localPath": "assets/release/android-sdk-35-2-aarch64.cgt.br",
-      "remotePath": "android-sdk-35-2-aarch64.cgt.br",
-      "url": "https://appdevforall.org/dev-assets/release/android-sdk-35-2-aarch64.cgt.br",
+      "localPath": "assets/release/v8/data/common/android-sdk.zip.br",
+      "remotePath": "v8/android-sdk.zip.br",
+      "url": "https://appdevforall.org/dev-assets/release/v8/android-sdk.zip.br",
       "version": "35-2",
       "abi": [
         "arm64-v8a"
@@ -342,9 +342,9 @@
     {
       "id": "bootstrap-arm64-v8a-brotli",
       "variant": "release",
-      "localPath": "assets/release/bootstrap-aarch64.cgt.br",
-      "remotePath": "bootstrap-aarch64.cgt.br",
-      "url": "https://appdevforall.org/dev-assets/release/bootstrap-aarch64.cgt.br",
+      "localPath": "assets/release/v8/data/common/bootstrap.zip.br",
+      "remotePath": "v8/bootstrap.zip.br",
+      "url": "https://appdevforall.org/dev-assets/release/v8/bootstrap.zip.br",
       "version": "asset-set-2026-09-22",
       "abi": [
         "arm64-v8a"
@@ -363,15 +363,15 @@
     {
       "id": "core-tools-brotli",
       "variant": "release",
-      "localPath": "assets/release/core.cgt.br",
+      "localPath": "assets/release/common/data/common/core.cgt.br",
       "remotePath": "core.cgt.br",
       "url": "https://appdevforall.org/dev-assets/release/core.cgt.br",
       "version": "asset-set-2026-09-22",
       "abi": [
         "common"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 400245,
+      "sha256": "69d60fa6e2c5fa7a8764a87409d98137b044bed3799da3bd89e8d38c75c65a27",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
