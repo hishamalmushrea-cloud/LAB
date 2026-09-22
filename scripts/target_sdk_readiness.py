@@ -7,8 +7,7 @@ the migration into a measurable ratchet instead of a prose document:
 
 	* every known blocker is detected mechanically from the manifest and sources;
 	* the accepted blockers live in a checked-in baseline;
-	* CI fails when a NEW blocker appears, or when a baselined blocker is fixed
-	  but not removed from the baseline.
+	* CI fails when a new blocker appears, or when a fixed one stays baselined.
 
 Raising `TARGET_SDK` is therefore a matter of emptying this baseline, one
 entry at a time, with each fix independently reviewable.
