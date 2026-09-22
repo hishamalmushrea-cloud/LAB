@@ -56,16 +56,21 @@ internal object LocalWebServerSecurity {
 		return candidates.size == 1 && constantTimeEquals(candidates.single(), expectedToken)
 	}
 
-	fun isLoopbackBindName(value: String): Boolean =
-		value.lowercase() in setOf("localhost", "127.0.0.1", "::1")
+	fun isLoopbackBindName(value: String): Boolean = value.lowercase() in setOf("localhost", "127.0.0.1", "::1")
 
-	fun isAllowedHost(value: String, port: Int): Boolean {
+	fun isAllowedHost(
+		value: String,
+		port: Int,
+	): Boolean {
 		val authorities = mutableSetOf("localhost:$port", "127.0.0.1:$port", "[::1]:$port")
 		if (port == 80) authorities += setOf("localhost", "127.0.0.1", "[::1]")
 		return value.trim().lowercase() in authorities
 	}
 
-	fun isAllowedOrigin(value: String, port: Int): Boolean =
+	fun isAllowedOrigin(
+		value: String,
+		port: Int,
+	): Boolean =
 		runCatching {
 			val origin = URI(value)
 			val host = origin.host?.lowercase()
@@ -78,7 +83,10 @@ internal object LocalWebServerSecurity {
 				host in setOf("localhost", "127.0.0.1", "::1", "[::1]")
 		}.getOrDefault(false)
 
-	private fun constantTimeEquals(left: String, right: String): Boolean {
+	private fun constantTimeEquals(
+		left: String,
+		right: String,
+	): Boolean {
 		val leftBytes = left.toByteArray(Charsets.UTF_8)
 		val rightBytes = right.toByteArray(Charsets.UTF_8)
 		return MessageDigest.isEqual(leftBytes, rightBytes)
