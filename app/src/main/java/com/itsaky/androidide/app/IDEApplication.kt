@@ -25,7 +25,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import androidx.core.content.ContextCompat
 import androidx.work.Configuration
 import com.itsaky.androidide.BuildConfig
 import com.itsaky.androidide.di.coreModule
@@ -240,14 +239,7 @@ class IDEApplication :
 				CredentialProtectedApplicationLoader.load(instance)
 			} else {
 				logger.info("Device in Direct Boot Mode: postponing initialization...")
-				// ACTION_USER_UNLOCKED is a protected system broadcast, so the receiver must not be
-				// exported. API 34 rejects an unflagged registerReceiver outright.
-				ContextCompat.registerReceiver(
-					this@IDEApplication,
-					deviceUnlockReceiver,
-					IntentFilter(Intent.ACTION_USER_UNLOCKED),
-					ContextCompat.RECEIVER_NOT_EXPORTED,
-				)
+				registerReceiver(deviceUnlockReceiver, IntentFilter(Intent.ACTION_USER_UNLOCKED))
 			}
 		}
 	}

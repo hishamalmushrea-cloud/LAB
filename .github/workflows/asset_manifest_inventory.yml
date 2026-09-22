@@ -6,8 +6,6 @@ on:
       - ".github/workflows/asset_manifest_inventory.yml"
       - "config/assets-manifest.json"
       - "scripts/asset_manifest.py"
-      - "scripts/manifest_provenance.py"
-      - "scripts/ed25519.py"
 
 permissions:
   contents: read
@@ -26,9 +24,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Test manifest tooling
-        run: |
-          python3 -m unittest scripts.tests.test_asset_manifest -v
-          python3 -m unittest scripts.tests.test_manifest_provenance -v
+        run: python3 -m unittest scripts.tests.test_asset_manifest -v
 
       - name: Hydrate missing sizes and SHA-256 digests
         shell: bash

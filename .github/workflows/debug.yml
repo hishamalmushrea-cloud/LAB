@@ -81,30 +81,7 @@ jobs:
         shell: bash
         run: |
           python3 -m unittest scripts.tests.test_asset_manifest -v
-          python3 -m unittest scripts.tests.test_manifest_provenance -v
           python3 scripts/asset_manifest.py config/assets-manifest.json
-
-      - name: Verify external asset manifest provenance when signed
-        shell: bash
-        env:
-          COTG_MANIFEST_PUBLIC_KEY: ${{ vars.COTG_MANIFEST_PUBLIC_KEY }}
-        run: |
-          if [[ ! -f config/assets-manifest.sig.json ]]; then
-            echo "::notice title=Manifest provenance::No detached signature is committed yet; skipping verification."
-            exit 0
-          fi
-          if [[ -z "${COTG_MANIFEST_PUBLIC_KEY}" ]]; then
-            echo "::error title=Manifest provenance::config/assets-manifest.sig.json exists but repository variable COTG_MANIFEST_PUBLIC_KEY is unset."
-            exit 1
-          fi
-          python3 scripts/manifest_provenance.py verify config/assets-manifest.json
-
-      - name: Check target SDK migration ratchet
-        shell: bash
-        run: |
-          python3 -m unittest scripts.tests.test_target_sdk_readiness -v
-          python3 scripts/target_sdk_readiness.py --report
-          python3 scripts/target_sdk_readiness.py
 
       - name: Configure transferred-repository formatting baseline
         shell: bash

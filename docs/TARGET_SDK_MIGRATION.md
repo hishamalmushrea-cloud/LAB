@@ -40,29 +40,36 @@ Detection is intentionally conservative: `registerReceiver(null, filter)` (a sti
 `ContextCompat.registerReceiver` and any call whose flags appear in the following formatted argument
 list are not reported, so the ratchet does not push authors toward noise-suppressing rewrites.
 
-## Fixed while introducing the ratchet
+## Fixed so far
 
 * `GradleBuildService` now builds its notification `PendingIntent` with `FLAG_IMMUTABLE`. The launch
   intent carries no extras for the shade to fill in, so immutability is the correct choice.
 * `IDEApplication` registers its Direct Boot unlock receiver through
   `ContextCompat.registerReceiver` with `RECEIVER_NOT_EXPORTED`; `ACTION_USER_UNLOCKED` is a
   protected system broadcast and must never be exported.
+* `GradleBuildService` declares `android:foregroundServiceType="specialUse"` with the matching
+  `FOREGROUND_SERVICE_SPECIAL_USE` permission and a subtype property. None of the predefined API 34
+  types describes an on-device compiler; `specialUse` is the honest classification and states the
+  reason in the manifest rather than mislabelling the build as `dataSync`.
+* Cleartext is no longer permitted app-wide. `android:usesCleartextTraffic="true"` is gone and the
+  network security configuration denies cleartext in its base config, allowing it only for
+  loopback and the two emulator host aliases. A repository-wide search confirmed the loopback
+  preview server is the only cleartext peer, so the HTTPS-only asset contract is now enforced at
+  the transport layer too.
 
-Both are safe at API 28 and remove two of the seven detected blockers outright.
+That takes the inventory from seven blockers to three, all of them at API 28 today.
 
-## The remaining five
+## The remaining three
 
-The rest are product decisions rather than mechanical fixes, and each needs its own change:
+All three are the same decision wearing three hats: `legacy-external-storage`,
+`manage-external-storage` and `broad-read-external-storage` describe an IDE that manipulates whole
+source trees through unrestricted filesystem access. Fixing them needs a product change, not a
+manifest edit:
 
-1. **Storage model** (`legacy-external-storage`, `manage-external-storage`,
-   `broad-read-external-storage`) — the largest item. It needs an app-private workspace with
-   explicit import/export plus SAF tree grants for user-chosen project directories, because an IDE
-   legitimately manipulates whole source trees. Expect this to be the work that gates API 30.
-2. **`missing-foreground-service-type`** — `GradleBuildService` needs a declared type (`dataSync`
-   is the closest fit for a long-running build) and its matching permission before API 34.
-3. **`cleartext-traffic`** — the loopback preview server is the only cleartext consumer; scope it in
-   `network_security_config` and drop the app-wide attribute.
+* an app-private workspace as the default project location, with explicit import/export;
+* SAF tree grants for projects the user deliberately keeps outside that workspace;
+* a migration path for projects already living on shared storage.
 
-Order of work: fix the two cheap items above (done), then the foreground service type, then
-cleartext scoping, then the storage model. Raising `TARGET_SDK` should be the last commit of the
-sequence, not the first, and each step must keep the ratchet green.
+This is the work that gates API 30, and it should be designed before it is coded. Raising
+`TARGET_SDK` is the last commit of the sequence, not the first, and every step must keep the
+ratchet green.

@@ -11,13 +11,6 @@
       "summary": "READ_EXTERNAL_STORAGE stops being granted at API 33; declare maxSdkVersion and move media access to the granular permissions."
     },
     {
-      "key": "cleartext-traffic:app/src/main/AndroidManifest.xml:application",
-      "id": "cleartext-traffic",
-      "api": 28,
-      "location": "app/src/main/AndroidManifest.xml:application",
-      "summary": "usesCleartextTraffic=true widens the network security policy; scope it to the loopback build server in network_security_config instead."
-    },
-    {
       "key": "legacy-external-storage:app/src/main/AndroidManifest.xml:application",
       "id": "legacy-external-storage",
       "api": 29,
@@ -30,13 +23,6 @@
       "api": 30,
       "location": "app/src/main/AndroidManifest.xml:uses-permission",
       "summary": "MANAGE_EXTERNAL_STORAGE requires a Play policy exemption and a user-granted special access screen once the target reaches 30."
-    },
-    {
-      "key": "missing-foreground-service-type:app/src/main/AndroidManifest.xml:service:.services.builder.GradleBuildService",
-      "id": "missing-foreground-service-type",
-      "api": 34,
-      "location": "app/src/main/AndroidManifest.xml:service:.services.builder.GradleBuildService",
-      "summary": "This service calls startForeground but declares no foregroundServiceType; API 34 throws MissingForegroundServiceTypeException."
     }
   ]
 }

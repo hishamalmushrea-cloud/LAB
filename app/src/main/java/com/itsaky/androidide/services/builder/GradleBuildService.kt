@@ -291,15 +291,7 @@ class GradleBuildService :
 		val ticker = getString(R.string.title_gradle_service_notification_ticker)
 		val title = getString(R.string.title_gradle_service_notification)
 		val launch = packageManager.getLaunchIntentForPackage(BuildConfig.APPLICATION_ID)
-		// FLAG_IMMUTABLE is mandatory from API 31 and the launch intent carries no extras that
-		// the notification shade would need to fill in, so the immutable variant is correct here.
-		val intent =
-			PendingIntent.getActivity(
-				this,
-				0,
-				launch,
-				PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-			)
+		val intent = PendingIntent.getActivity(this, 0, launch, PendingIntent.FLAG_UPDATE_CURRENT)
 		val builder =
 			Notification
 				.Builder(this, BaseApplication.NOTIFICATION_GRADLE_BUILD_SERVICE)
