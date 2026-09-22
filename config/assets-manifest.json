@@ -9,12 +9,12 @@
       "localPath": "assets/android-sdk-arm64-v8a.zip",
       "remotePath": "android-sdk-arm64-v8a.zip",
       "url": "https://appdevforall.org/dev-assets/debug/android-sdk-arm64-v8a.zip",
-      "version": "35-2",
+      "version": "legacy-asset-set-2026-09-22",
       "abi": [
         "arm64-v8a"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 80722215,
+      "sha256": "e57ccbe19849a7462072a828db91c86abb00418a76e647bdb8a763b42fc5933e",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
@@ -22,7 +22,8 @@
       "license": {
         "id": "LicenseRef-Android-SDK",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "android-sdk-armeabi-v7a",
@@ -30,12 +31,12 @@
       "localPath": "assets/android-sdk-armeabi-v7a.zip",
       "remotePath": "android-sdk-armeabi-v7a.zip",
       "url": "https://appdevforall.org/dev-assets/debug/android-sdk-armeabi-v7a.zip",
-      "version": "35-2",
+      "version": "legacy-asset-set-2026-09-22",
       "abi": [
         "armeabi-v7a"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 80143373,
+      "sha256": "40f01f3ab0c03984c6db1a92dc139e5b262b809fd4ac7c7b33244e2a682da7bb",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
@@ -43,7 +44,8 @@
       "license": {
         "id": "LicenseRef-Android-SDK",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "bootstrap-arm64-v8a",
@@ -55,8 +57,8 @@
       "abi": [
         "arm64-v8a"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 369902413,
+      "sha256": "006ee40470311192365881c186e0f04a741063b2640d5efe61b0a94a1251fb49",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
@@ -64,7 +66,8 @@
       "license": {
         "id": "LicenseRef-Mixed-Upstream",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "bootstrap-armeabi-v7a",
@@ -76,8 +79,8 @@
       "abi": [
         "armeabi-v7a"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 340888988,
+      "sha256": "ed0e0adf8d0bbf17175b07f4f88028c8abf207e913fff5ec7e1ef1c50a2b2fbd",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
@@ -85,7 +88,8 @@
       "license": {
         "id": "LicenseRef-Mixed-Upstream",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "offline-documentation-db",
@@ -106,7 +110,8 @@
       "license": {
         "id": "LicenseRef-Mixed-Upstream",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "immutable-release"
     },
     {
       "id": "gradle-distribution",
@@ -127,7 +132,8 @@
       "license": {
         "id": "Apache-2.0",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "gradle-api",
@@ -148,7 +154,8 @@
       "license": {
         "id": "Apache-2.0",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "local-maven-repository",
@@ -160,8 +167,8 @@
       "abi": [
         "common"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 272642416,
+      "sha256": "2273633fccc45215839ade08972831229330f1e22bc0d46303d0141263c41c6d",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
@@ -169,7 +176,8 @@
       "license": {
         "id": "LicenseRef-Mixed-Upstream",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "core-tools",
@@ -190,7 +198,8 @@
       "license": {
         "id": "GPL-3.0-only",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "gradle-distribution-brotli",
@@ -211,7 +220,8 @@
       "license": {
         "id": "Apache-2.0",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "gradle-api-brotli",
@@ -232,7 +242,8 @@
       "license": {
         "id": "Apache-2.0",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "local-maven-repository-brotli",
@@ -244,8 +255,8 @@
       "abi": [
         "common"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 117300583,
+      "sha256": "f0cba9f8bd2cb84560bc590b97957accfff7378b7afe09bdc78ef184a6458c7b",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
@@ -253,7 +264,8 @@
       "license": {
         "id": "LicenseRef-Mixed-Upstream",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "offline-documentation-db-brotli",
@@ -261,20 +273,21 @@
       "localPath": "assets/release/common/database/documentation.db.br",
       "remotePath": "documentation.db.br",
       "url": "https://appdevforall.org/dev-assets/release/documentation.db.br",
-      "version": "db-2025-07-16b",
+      "version": "legacy-asset-set-2026-09-22",
       "abi": [
         "common"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 297763377,
+      "sha256": "f105aaa4cd1bfbc14d411b166cc46dfa5e3a787d3670949fc53bd43ec5bae9a9",
       "source": {
-        "project": "https://github.com/appdevforall/OfflineDocumentationTools",
-        "revision": "db-2025-07-16b"
+        "project": "https://github.com/appdevforall/CodeOnTheGo",
+        "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
       },
       "license": {
         "id": "LicenseRef-Mixed-Upstream",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "android-sdk-armeabi-v7a-brotli",
@@ -282,12 +295,12 @@
       "localPath": "assets/release/v7/data/common/android-sdk.zip.br",
       "remotePath": "v7/android-sdk.zip.br",
       "url": "https://appdevforall.org/dev-assets/release/v7/android-sdk.zip.br",
-      "version": "35-2",
+      "version": "legacy-asset-set-2026-09-22",
       "abi": [
         "armeabi-v7a"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 64052798,
+      "sha256": "4169c0a52e5d3bd2d06f0bb6dbcc44ebcbb6ace73f6624b23c20366b42bb3189",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
@@ -295,7 +308,8 @@
       "license": {
         "id": "LicenseRef-Android-SDK",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "bootstrap-armeabi-v7a-brotli",
@@ -307,8 +321,8 @@
       "abi": [
         "armeabi-v7a"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 97899503,
+      "sha256": "4676176ba9d98300c77b56841a7614608c0b2ba083591e7177262648944d41a6",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
@@ -316,7 +330,8 @@
       "license": {
         "id": "LicenseRef-Mixed-Upstream",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "android-sdk-arm64-v8a-brotli",
@@ -324,12 +339,12 @@
       "localPath": "assets/release/v8/data/common/android-sdk.zip.br",
       "remotePath": "v8/android-sdk.zip.br",
       "url": "https://appdevforall.org/dev-assets/release/v8/android-sdk.zip.br",
-      "version": "35-2",
+      "version": "legacy-asset-set-2026-09-22",
       "abi": [
         "arm64-v8a"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 64169266,
+      "sha256": "def61720c755317db3d6d63d205bdd2a2917d68aa615a567c8062fc6c1d9911b",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
@@ -337,7 +352,8 @@
       "license": {
         "id": "LicenseRef-Android-SDK",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "bootstrap-arm64-v8a-brotli",
@@ -349,8 +365,8 @@
       "abi": [
         "arm64-v8a"
       ],
-      "size": null,
-      "sha256": null,
+      "size": 103675602,
+      "sha256": "233e7f49d88b121e652140fce350c56e3b6343f86056a2d1ed8378a11881e3fb",
       "source": {
         "project": "https://github.com/appdevforall/CodeOnTheGo",
         "revision": "681a7dcf5daba015c15e3d2d029a922990ca976e"
@@ -358,7 +374,8 @@
       "license": {
         "id": "LicenseRef-Mixed-Upstream",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "core-tools-brotli",
@@ -379,7 +396,8 @@
       "license": {
         "id": "GPL-3.0-only",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "mutable-legacy"
     },
     {
       "id": "jdi-support",
@@ -400,7 +418,8 @@
       "license": {
         "id": "GPL-2.0-with-classpath-exception",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "immutable-release"
     },
     {
       "id": "kotlin-analysis-api",
@@ -421,7 +440,8 @@
       "license": {
         "id": "Apache-2.0",
         "reference": "docs/assets/ASSET_LICENSES.md"
-      }
+      },
+      "urlStability": "immutable-release"
     }
   ]
 }

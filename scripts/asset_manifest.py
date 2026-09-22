@@ -26,6 +26,7 @@ REQUIRED_ENTRY_FIELDS = {
     "localPath",
     "remotePath",
     "url",
+    "urlStability",
     "version",
     "abi",
     "size",
@@ -94,6 +95,8 @@ def validate_manifest(document: Any, *, allow_missing_digests: bool = False) -> 
         seen_paths.add(local_path)
 
         _validate_https_url(raw_entry["url"], "url", asset_id)
+        if raw_entry["urlStability"] not in {"immutable-release", "mutable-legacy"}:
+            raise ManifestError(f"{asset_id}: urlStability must describe an immutable or legacy URL")
         _non_empty_string(raw_entry["variant"], "variant", asset_id)
         _non_empty_string(raw_entry["version"], "version", asset_id)
 

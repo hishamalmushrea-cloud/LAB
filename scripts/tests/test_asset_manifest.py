@@ -16,6 +16,7 @@ class AssetManifestTest(unittest.TestCase):
             "localPath": "assets/example.bin",
             "remotePath": "example.bin",
             "url": "https://downloads.example.org/releases/v1/example.bin",
+            "urlStability": "immutable-release",
             "version": "v1",
             "abi": ["common"],
             "size": 3,
@@ -52,6 +53,12 @@ class AssetManifestTest(unittest.TestCase):
         self.entry["url"] = "https://example.org/releases/latest/download/example.bin"
 
         with self.assertRaisesRegex(asset_manifest.ManifestError, "pin a release"):
+            asset_manifest.validate_manifest(self.manifest)
+
+    def test_rejects_unknown_url_stability(self):
+        self.entry["urlStability"] = "probably-stable"
+
+        with self.assertRaisesRegex(asset_manifest.ManifestError, "urlStability"):
             asset_manifest.validate_manifest(self.manifest)
 
     def test_rejects_path_traversal(self):
