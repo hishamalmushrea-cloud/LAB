@@ -194,12 +194,18 @@ fun Project.configureAndroidModule(coreLibDesugDep: Provider<MinimalExternalModu
 							val commonAssets = assetsDir.resolve("common")
 							val flavorAssets = assetsDir.resolve(variant.flavorName!!)
 
-							if (!commonAssets.isDirectory) {
-								throw GradleException("${commonAssets.absolutePath} does not exist or is not a directory")
+							if (
+								(!commonAssets.exists() && !commonAssets.mkdirs()) ||
+								!commonAssets.isDirectory
+							) {
+								throw GradleException("Unable to create asset directory ${commonAssets.absolutePath}")
 							}
 
-							if (!flavorAssets.isDirectory) {
-								throw GradleException("${flavorAssets.absolutePath} does not exist or is not a directory")
+							if (
+								(!flavorAssets.exists() && !flavorAssets.mkdirs()) ||
+								!flavorAssets.isDirectory
+							) {
+								throw GradleException("Unable to create asset directory ${flavorAssets.absolutePath}")
 							}
 
 							addStaticSourceDirectory(commonAssets.absolutePath)

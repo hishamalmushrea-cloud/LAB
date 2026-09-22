@@ -170,10 +170,13 @@ compose-preview/src/main/assets/compose/
 lsp/kotlin/src/main/resources/stdlib-index.json
 
 # Large asset files (bootstrap, SDK archives, databases, dependencies)
+assets/**/*.part
+assets/**/*.lock
 assets/bootstrap-*.zip
 assets/android-sdk-*.zip
-assets/release/**/data/**/*.zip.br
+assets/release/**/*.br
 assets/release/**/dynamic_libs/
+assets/core.cgt
 assets/documentation.db
 assets/localMvnRepository.zip
 assets/gradle-*.zip
