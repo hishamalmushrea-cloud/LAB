@@ -1,0 +1,79 @@
+name: Inventory external assets
+
+on:
+  push:
+    paths:
+      - ".github/workflows/asset_manifest_inventory.yml"
+      - "config/assets-manifest.json"
+      - "scripts/asset_manifest.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: asset-manifest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hydrate-and-validate:
+    name: Hydrate and validate SHA-256 manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Test manifest tooling
+        run: python3 -m unittest scripts.tests.test_asset_manifest -v
+
+      - name: Hydrate missing sizes and SHA-256 digests
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p generated
+          if ! python3 scripts/asset_manifest.py \
+            config/assets-manifest.json \
+            --hydrate-missing \
+            --output generated/assets-manifest.json \
+            --workers 4 \
+            --retries 3 2>&1 | tee generated/hydrate.log; then
+            python3 - generated/hydrate.log <<'PY'
+          import sys
+          text = open(sys.argv[1], errors="replace").read()
+          for index in range(0, len(text), 3000):
+              chunk = text[index:index + 3000]
+              chunk = chunk.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+              print(f"::error title=Asset hydration failure (part {index // 3000 + 1})::{chunk}")
+          PY
+            exit 1
+          fi
+
+      - name: Validate generated manifest
+        run: python3 scripts/asset_manifest.py generated/assets-manifest.json
+
+      - name: Expose generated digests
+        shell: bash
+        run: |
+          python3 - generated/assets-manifest.json <<'PY'
+          import json
+          import sys
+          document = json.load(open(sys.argv[1], encoding="utf-8"))
+          digest_rows = [
+              {key: asset[key] for key in ("id", "size", "sha256")}
+              for asset in document["assets"]
+          ]
+          text = json.dumps(digest_rows, separators=(",", ":"))
+          for index in range(0, len(text), 3000):
+              chunk = text[index:index + 3000]
+              chunk = chunk.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+              print(f"::notice title=Hydrated asset digests (part {index // 3000 + 1})::{chunk}")
+          PY
+
+      - name: Upload generated manifest and hydration log
+        if: always() && hashFiles('generated/assets-manifest.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: hydrated-assets-manifest
+          path: generated/
+          if-no-files-found: error
+          retention-days: 7

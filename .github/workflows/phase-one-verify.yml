@@ -1,0 +1,106 @@
+name: Phase one verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Verification suite to run
+        required: true
+        type: choice
+        default: configuration
+        options:
+          - configuration
+          - plugin-manager
+          - phase-one
+      confirm:
+        description: Run the selected secret-free verification suite
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-one-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: inputs.confirm == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g
+    steps:
+      - name: Check out requested revision
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Set up Android command-line tools
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+
+      - name: Validate repository structure
+        shell: bash
+        run: |
+          if [[ -f scripts/validate_repository_structure.py ]]; then
+            python3 scripts/validate_repository_structure.py
+          else
+            echo 'Structure validator is not present on this revision; continuing with Gradle configuration.'
+          fi
+
+      - name: Configure the complete Gradle graph
+        run: ./gradlew projects --stacktrace --no-daemon
+
+      - name: Run plugin-manager unit tests
+        if: inputs.suite == 'plugin-manager' || inputs.suite == 'phase-one'
+        run: ./gradlew :plugin-manager:testV8DebugUnitTest --stacktrace --no-daemon
+
+      - name: Install native toolchain for app tests
+        if: inputs.suite == 'phase-one'
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" 'ndk;29.0.14206865' 'cmake;3.22.1'
+
+      - name: Create non-secret Firebase test configuration
+        if: inputs.suite == 'phase-one'
+        shell: bash
+        run: |
+          cat > app/google-services.json <<'JSON'
+          {
+            "project_info": {
+              "project_number": "0",
+              "project_id": "local-verification",
+              "storage_bucket": "local-verification.invalid"
+            },
+            "client": [{
+              "client_info": {
+                "mobilesdk_app_id": "1:0:android:0000000000000000",
+                "android_client_info": {"package_name": "com.itsaky.androidide"}
+              },
+              "api_key": [{"current_key": "not-a-secret"}]
+            }],
+            "configuration_version": "1"
+          }
+          JSON
+
+      - name: Run app unit tests
+        if: inputs.suite == 'phase-one'
+        run: ./gradlew :app:testV8DebugUnitTest --stacktrace --no-daemon

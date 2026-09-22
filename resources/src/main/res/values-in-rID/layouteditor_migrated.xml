@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resources migrated from the layouteditor module (now extracted to a plugin) that the app's own layouts/code still reference.
+	They were previously resolved transitively from that module. -->
+<resources
+	xmlns:tools="http://schemas.android.com/tools"
+	tools:ignore="MissingTranslation">
+	<string name="cancel">Batal</string>
+	<string name="clear">Hapus</string>
+	<string name="delete">Hapus</string>
+	<string name="edit">Ubah</string>
+	<string name="rename">Ganti nama</string>
+	<string name="delete_project">Hapus proyek</string>
+	<string name="rename_project">Ganti nama proyek</string>
+	<string name="options">Opsi</string>
+	<string name="create">Buat</string>
+	<string name="msg_new_project_name">Masukkan nama proyek baru</string>
+	<string name="msg_delete_project">Apakah Anda yakin ingin menghapus proyek ini?</string>
+	<string name="msg_current_name_unavailable">Nama saat ini tidak tersedia!</string>
+	<string name="msg_cannnot_empty">Kolom tidak boleh kosong!</string>
+</resources>
