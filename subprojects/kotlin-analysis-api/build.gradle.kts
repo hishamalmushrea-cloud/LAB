@@ -22,6 +22,7 @@ externalAssets {
 			AssetSource.External(
 				url = uri("$ktAndroidRepo/releases/download/$ktAndroidTag/$ktAndroidJarName"),
 				sha256Checksum = "418da363aaa6ebea3f234042cf91444de751bcf8264c4eb9cde38c763a79b3a5",
+				expectedSize = 199_655_918,
 			)
 	}
 }

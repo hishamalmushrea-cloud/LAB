@@ -77,6 +77,12 @@ jobs:
             python3 scripts/validate_repository_structure.py
           fi
 
+      - name: Validate external asset manifest tooling
+        shell: bash
+        run: |
+          python3 -m unittest scripts.tests.test_asset_manifest -v
+          python3 scripts/asset_manifest.py config/assets-manifest.json
+
       - name: Configure transferred-repository formatting baseline
         shell: bash
         run: |
@@ -141,6 +147,25 @@ jobs:
               chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
               print(f'::error title=Spotless patch second segment (part {index // 3000 + 1})::{chunk}')
           PY
+
+      - name: Test atomic resumable asset downloader
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! ./gradlew -p composite-builds/build-logic :plugins:test \
+            --tests 'com.itsaky.androidide.plugins.util.DownloadUtilsTest' --no-daemon \
+            2>&1 | tee asset-downloader-tests.log; then
+            python3 - asset-downloader-tests.log <<'PY'
+          import sys
+          lines = open(sys.argv[1], errors='replace').read().splitlines()
+          text = '\n'.join(lines[-160:])
+          for index in range(0, len(text), 3000):
+              chunk = text[index:index + 3000]
+              chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::error title=Asset downloader tests failed (part {index // 3000 + 1})::{chunk}')
+          PY
+            exit 1
+          fi
 
       # The targeted Gradle tasks below configure the same complete multi-project graph; avoid a
       # separate `projects` daemon invocation so compiler feedback arrives several minutes sooner.

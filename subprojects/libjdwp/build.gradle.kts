@@ -24,6 +24,7 @@ externalAssets {
 			AssetSource.External(
 				url = uri("$ojLibjdwpRepo/releases/download/$ojLibjdwpTag/jdi-support.jar"),
 				sha256Checksum = "1ae447d08bd40b20abf270079cf59919d8575a2e8657fa936faf18678fe1ccc5",
+				expectedSize = 587_255,
 			)
 	}
 }

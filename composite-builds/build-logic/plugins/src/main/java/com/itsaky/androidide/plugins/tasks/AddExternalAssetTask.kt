@@ -94,6 +94,7 @@ abstract class AddExternalAssetTask : DefaultTask() {
             url = source.url.toURL(),
             destination = dest,
             sha256Checksum = source.sha256Checksum,
+            expectedSize = source.expectedSize,
             logger = project.logger
         )
 

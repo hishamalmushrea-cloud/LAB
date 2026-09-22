@@ -46,10 +46,12 @@ sealed interface AssetSource {
      * @property url The URL to download the asset from.
      * @property sha256Checksum The expected SHA-256 checksum of the asset. If the downloaded asset
      *                          does not have this checksum, the build will fail.
+     * @property expectedSize The exact expected byte length of the asset.
      */
     data class External(
         val url: URI,
-        val sha256Checksum: String
+        val sha256Checksum: String,
+        val expectedSize: Long,
     ) : AssetSource, Serializable {
         companion object {
             private const val serialVersionUID = 1L

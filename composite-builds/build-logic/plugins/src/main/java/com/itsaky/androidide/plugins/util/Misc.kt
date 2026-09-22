@@ -10,11 +10,12 @@ fun MessageDigest.sha256(file: File): String {
     this.reset()
 
     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-    val input = file.inputStream()
-    while (true) {
-        val bytesRead = input.read(buffer)
-        if (bytesRead <= 0) break
-        update(buffer, 0, bytesRead)
+    file.inputStream().use { input ->
+        while (true) {
+            val bytesRead = input.read(buffer)
+            if (bytesRead <= 0) break
+            update(buffer, 0, bytesRead)
+        }
     }
 
     var checksum = BigInteger(1, digest()).toString(16)

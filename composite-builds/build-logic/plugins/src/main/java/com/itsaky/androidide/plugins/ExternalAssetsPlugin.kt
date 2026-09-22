@@ -73,6 +73,7 @@ abstract class ExternalAssetsExtension @Inject constructor(
             source.url.toURL(),
             destination = cacheDir.resolve(config.jarName),
             sha256Checksum = source.sha256Checksum,
+            expectedSize = source.expectedSize,
             logger = project.logger
         )
 

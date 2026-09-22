@@ -47,6 +47,9 @@ dependencies {
 	implementation(libs.google.java.format)
 	implementation(libs.google.protobuf.gradle)
 
+	testImplementation(libs.tests.junit)
+	testImplementation(libs.tests.google.truth)
+
 	val arch = DefaultNativePlatform.getCurrentArchitecture()
 	val brotli4jNatives =
 		DefaultNativePlatform.getCurrentOperatingSystem().let { os ->
