@@ -194,26 +194,10 @@ class IdeProjectServiceImpl(
 		}
 	}
 
-	// Canonicalised so a symlinked root cannot bypass the containment check by presenting a
-	// different textual prefix than the path being tested.
-	private fun getDefaultAllowedPaths(): List<String> {
-		val projectsDirPaths =
-			runCatching { Environment.PROJECTS_DIR }
-				.getOrNull()
-				?.let { dir ->
-					listOfNotNull(dir.absolutePath, runCatching { dir.canonicalPath }.getOrNull())
-				}.orEmpty()
-
-		return (
-			projectsDirPaths +
-				listOf(
-					"/storage/emulated/0/CodeOnTheGoProjects",
-					"/sdcard/CodeOnTheGoProjects",
-					(System.getProperty("user.home") ?: "/") + "/CodeOnTheGoProjects",
-					"/tmp/AndroidIDEProject", // Allow temporary project for demo purposes
-				)
-		).map { runCatching { File(it).canonicalPath }.getOrDefault(it) }
-	}
+	// Delegates to PluginPathAllowlist: this list is a trust boundary, and it previously existed
+	// here as a third, drifted copy that ignored the configured projects directory.
+	private fun getDefaultAllowedPaths(): List<String> =
+		PluginPathAllowlist.defaultAllowedPaths(permissions, pluginId)
 
 	private companion object {
 		private val log = LoggerFactory.getLogger(IdeProjectServiceImpl::class.java)

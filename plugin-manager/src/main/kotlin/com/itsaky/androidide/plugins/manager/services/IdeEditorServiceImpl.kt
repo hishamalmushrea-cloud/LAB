@@ -8,7 +8,6 @@ import com.itsaky.androidide.plugins.services.EditorContentChangeListener
 import com.itsaky.androidide.plugins.services.FileChangeListener
 import com.itsaky.androidide.plugins.services.IdeEditorService
 import com.itsaky.androidide.plugins.services.SelectionRange
-import com.itsaky.androidide.utils.Environment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
@@ -522,18 +521,11 @@ class IdeEditorServiceImpl(
 		}
 	}
 
-	// Canonicalised so symlinked roots don't bypass the check; anchored on File.separator at
-	// the match site so e.g. "/.../CodeOnTheGoProjects" doesn't also admit
-	// "/.../CodeOnTheGoProjectsBackup/".
-	private val defaultAllowedPaths: List<String> by lazy {
-		val projects = Environment.PROJECTS_FOLDER
-		listOf(
-			"/storage/emulated/0/$projects",
-			"/sdcard/$projects",
-			(System.getProperty("user.home") ?: "/") + "/$projects",
-			"/tmp/CodeOnTheGoProject",
-		).map { runCatching { File(it).canonicalPath }.getOrDefault(it) }
-	}
+	// Delegates to PluginPathAllowlist: this list is a trust boundary and must not be a second
+	// copy. The previous local list ignored the configured projects directory and matched only
+	// hardcoded shared-storage prefixes.
+	private val defaultAllowedPaths: List<String>
+		get() = PluginPathAllowlist.defaultAllowedPaths(permissions, pluginId)
 
 	companion object {
 		private val log = LoggerFactory.getLogger(IdeEditorServiceImpl::class.java)

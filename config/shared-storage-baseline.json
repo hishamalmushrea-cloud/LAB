@@ -94,39 +94,15 @@
       "summary": "Targets a public shared directory, which scoped storage restricts from API 29."
     },
     {
-      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeEditorServiceImpl.kt:531",
+      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:34",
       "id": "hardcoded-storage-path",
-      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeEditorServiceImpl.kt:531",
+      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:34",
       "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
     },
     {
-      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeEditorServiceImpl.kt:532",
+      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:35",
       "id": "hardcoded-storage-path",
-      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeEditorServiceImpl.kt:532",
-      "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
-    },
-    {
-      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeProjectServiceImpl.kt:210",
-      "id": "hardcoded-storage-path",
-      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeProjectServiceImpl.kt:210",
-      "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
-    },
-    {
-      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeProjectServiceImpl.kt:211",
-      "id": "hardcoded-storage-path",
-      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeProjectServiceImpl.kt:211",
-      "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
-    },
-    {
-      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:22",
-      "id": "hardcoded-storage-path",
-      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:22",
-      "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
-    },
-    {
-      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:23",
-      "id": "hardcoded-storage-path",
-      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:23",
+      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:35",
       "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
     }
   ]
