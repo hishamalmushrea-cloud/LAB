@@ -20,7 +20,6 @@ import java.io.File
  * live in an app-owned workspace.
  */
 internal object PluginPathAllowlist {
-
 	private const val PLUGIN_DATA_ROOT = "plugins"
 
 	/**

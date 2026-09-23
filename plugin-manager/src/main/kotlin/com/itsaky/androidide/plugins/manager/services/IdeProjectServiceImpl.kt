@@ -196,8 +196,7 @@ class IdeProjectServiceImpl(
 
 	// Delegates to PluginPathAllowlist: this list is a trust boundary, and it previously existed
 	// here as a third, drifted copy that ignored the configured projects directory.
-	private fun getDefaultAllowedPaths(): List<String> =
-		PluginPathAllowlist.defaultAllowedPaths(permissions, pluginId)
+	private fun getDefaultAllowedPaths(): List<String> = PluginPathAllowlist.defaultAllowedPaths(permissions, pluginId)
 
 	private companion object {
 		private val log = LoggerFactory.getLogger(IdeProjectServiceImpl::class.java)

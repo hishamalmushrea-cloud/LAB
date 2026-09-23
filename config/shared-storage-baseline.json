@@ -94,15 +94,15 @@
       "summary": "Targets a public shared directory, which scoped storage restricts from API 29."
     },
     {
-      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:34",
+      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:33",
       "id": "hardcoded-storage-path",
-      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:34",
+      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:33",
       "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
     },
     {
-      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:35",
+      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:34",
       "id": "hardcoded-storage-path",
-      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:35",
+      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:34",
       "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
     }
   ]
