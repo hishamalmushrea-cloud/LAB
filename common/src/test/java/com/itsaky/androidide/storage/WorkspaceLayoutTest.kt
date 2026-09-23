@@ -100,12 +100,13 @@ class WorkspaceLayoutTest {
 	@Test
 	fun `contains is not fooled by a symlink pointing outside`() {
 		// A plain string prefix check would pass this, which is why the implementation canonicalises.
-		val layout = layout()
+		// The root must be a subdirectory here so that the link target is genuinely outside it.
+		val root = temporaryFolder.newFolder("workspace")
 		val outside = temporaryFolder.newFolder("outside-target")
-		val link = File(temporaryFolder.root, "link")
+		val link = File(root, "link")
 		Files.createSymbolicLink(link.toPath(), outside.toPath())
 
-		assertThat(layout.contains(link)).isFalse()
+		assertThat(WorkspaceLayout(root).contains(link)).isFalse()
 	}
 
 	@Test

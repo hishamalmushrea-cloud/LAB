@@ -43,6 +43,10 @@ class WorkspaceLayout(
 	 */
 	fun resolveWithin(relative: String): File? {
 		if (relative.isBlank()) return null
+		// `File(root, "/etc/passwd")` quietly yields `<root>/etc/passwd` rather than the absolute
+		// path, so an absolute input would be accepted while meaning something other than it says.
+		// Rejecting it keeps the contract honest: this function takes a path relative to the root.
+		if (File(relative).isAbsolute) return null
 		val candidate = File(root, relative)
 		val canonicalRoot = root.canonicalFile
 		val canonicalCandidate = candidate.canonicalFile
