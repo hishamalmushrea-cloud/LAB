@@ -88,19 +88,26 @@ jobs:
       # classpath here, so validateSigningV8Debug dies with NoClassDefFoundError. Creating the
       # keystore up front with keytool avoids the generator entirely. The values are the ones AGP
       # itself uses, so the result is an ordinary debug keystore.
+      # ANDROID_SDK_HOME is pinned because that, not $HOME, is what AGP resolves the default debug
+      # keystore against; the previous attempt created the file in ~/.android and AGP still went
+      # looking elsewhere and fell back into its generator.
       - name: Pre-create the Android debug keystore
+        env:
+          ANDROID_SDK_HOME: ${{ github.workspace }}
         run: |
-          mkdir -p "$HOME/.android"
-          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+          echo "ANDROID_SDK_HOME=${{ github.workspace }}" >> "$GITHUB_ENV"
+          mkdir -p "${{ github.workspace }}/.android" "$HOME/.android"
+          for dir in "${{ github.workspace }}/.android" "$HOME/.android"; do
+          if [ ! -f "$dir/debug.keystore" ]; then
             keytool -genkeypair -v \
-              -keystore "$HOME/.android/debug.keystore" \
+              -keystore "$dir/debug.keystore" \
               -storepass android -keypass android \
               -alias androiddebugkey \
               -keyalg RSA -keysize 2048 -validity 10000 \
               -dname "CN=Android Debug,O=Android,C=US"
           fi
-          keytool -list -v -keystore "$HOME/.android/debug.keystore" \
-            -storepass android | head -8
+          done
+          ls -la "${{ github.workspace }}/.android" "$HOME/.android"
 
       - name: Install advancecomp (advzip, used by recompressApk)
         run: |
