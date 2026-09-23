@@ -197,6 +197,36 @@ jobs:
             exit 1
           fi
 
+      # :common holds the pure, Android-free logic - the Environment Doctor rules, the report
+      # redaction and the documentation interceptor - so these tests are cheap and are the ones
+      # most likely to catch a regression in behaviour rather than in wiring.
+      - name: Run common unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! ./gradlew :common:testV8DebugUnitTest --no-daemon \
+            2>&1 | tee common-tests.log; then
+            python3 - common-tests.log 'Common unit tests failed' <<'PY'
+          import sys
+          path, title = sys.argv[1:]
+          lines = open(path, errors='replace').read().splitlines()
+          errors = [line for line in lines if line.startswith(('e: ', 'error: '))]
+          tail = [line for line in lines if not line.startswith('w: ')][-100:]
+          text = '\n'.join(errors[-100:] + ['--- build tail ---'] + tail)
+          for index in range(0, len(text), 3000):
+              chunk = text[index:index + 3000]
+              chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::error title={title} (part {index // 3000 + 1})::{chunk}')
+          PY
+            {
+              echo '## Common unit test failure'
+              echo '```text'
+              tail -n 400 common-tests.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
       # The targeted Gradle tasks below configure the same complete multi-project graph; avoid a
       # separate `projects` daemon invocation so compiler feedback arrives several minutes sooner.
       - name: Run plugin-manager unit tests
