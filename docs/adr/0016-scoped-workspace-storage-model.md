@@ -48,6 +48,17 @@ Adopt a **workspace-first storage model with a single gateway**, in this order:
 3. **One gateway.** All shared-storage access goes through a single `:common` component. Feature
    code must not call `Environment.getExternalStorageDirectory()` directly. This is what makes the
    migration reviewable: the gateway's surface is the exhaustive list of what still needs porting.
+   *(Core landed: `com.itsaky.androidide.storage`.)* `WorkspaceLayout` owns path resolution -
+   `projects`, `logs`, `caches`, `imports` - and sanitises externally supplied project names, since
+   those arrive from a text field or from a picked tree's display name and may contain `../`.
+   `WorkspaceGateway` owns the policy: whether a build may run, where an import would land, and
+   whether a path may be written. Both are plain JVM types taking the root as a parameter, so the
+   rules are unit-tested without a device and no caller can resolve something outside the root.
+   `WorkspaceLocation` makes the managed/granted distinction unforgeable - there is deliberately no
+   way to obtain a `File` from a `Granted`, which is what stops the "convert the picked tree back
+   into a path" anti-pattern from reappearing. Binding the remaining UI call sites
+   (`BaseFragment`'s directory picker, `SetupState`, `Environment.java`) to the gateway is the next
+   step and is not done.
 4. **Developer switches stop being files on shared storage.** *(Done for the `WebServer`
    sentinels: see `DeveloperOverrides`.)* They were world-writable files under shared `Download/`,
    so another app holding storage access could plant `CodeOnTheGo.webserver.debug` and turn on

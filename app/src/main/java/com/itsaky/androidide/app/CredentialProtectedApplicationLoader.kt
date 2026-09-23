@@ -23,13 +23,13 @@ import com.itsaky.androidide.plugins.manager.core.PluginManager
 import com.itsaky.androidide.preferences.internal.DevOpsPreferences
 import com.itsaky.androidide.preferences.internal.GeneralPreferences
 import com.itsaky.androidide.resources.localization.LocaleProvider
+import com.itsaky.androidide.storage.WorkspaceLayout
 import com.itsaky.androidide.ui.themes.IDETheme
 import com.itsaky.androidide.ui.themes.IThemeManager
 import com.itsaky.androidide.utils.EditorDecorationBridge
 import com.itsaky.androidide.utils.Environment
 import com.itsaky.androidide.utils.FeatureFlagSource
 import com.itsaky.androidide.utils.FeatureFlags
-import com.itsaky.androidide.utils.FileUtil
 import com.itsaky.androidide.utils.VMUtils
 import io.sentry.Sentry
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -284,10 +284,22 @@ internal object CredentialProtectedApplicationLoader : ApplicationLoader {
 
 	private const val COLLATERAL_CRASH_WINDOW_MS = 3000L
 
+	private const val CRASH_LOG_FILE_NAME = "idelog.txt"
+
+	/**
+	 * Writes the last crash to an app-private log.
+	 *
+	 * This used to write `idelog.txt` into the root of shared storage, where every app with storage
+	 * access could read it. A stack trace names classes, file paths and sometimes user data, and
+	 * nothing in the product ever read the file back, so the only thing the location achieved was
+	 * disclosure. It now goes to the workspace log directory, which is app-private.
+	 */
 	private fun writeException(throwable: Throwable?) =
 		runCatching {
 			// ignore errors
-			File(FileUtil.getExternalStorageDir(), "idelog.txt")
+			val logs = WorkspaceLayout(application.filesDir).logs
+			logs.mkdirs()
+			File(logs, CRASH_LOG_FILE_NAME)
 				.writer()
 				.buffered()
 				.use { outputStream ->

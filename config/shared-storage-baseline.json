@@ -10,12 +10,6 @@
       "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
     },
     {
-      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/app/CredentialProtectedApplicationLoader.kt:290",
-      "id": "external-storage-root",
-      "location": "app/src/main/java/com/itsaky/androidide/app/CredentialProtectedApplicationLoader.kt:290",
-      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
-    },
-    {
       "key": "all-files-access:app/src/main/java/com/itsaky/androidide/utils/PermissionsHelper.kt:113",
       "id": "all-files-access",
       "location": "app/src/main/java/com/itsaky/androidide/utils/PermissionsHelper.kt:113",
