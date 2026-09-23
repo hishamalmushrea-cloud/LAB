@@ -84,6 +84,36 @@ jobs:
           python3 -m unittest scripts.tests.test_manifest_provenance -v
           python3 scripts/asset_manifest.py config/assets-manifest.json
 
+      # Reachability, not integrity: asset_manifest.py checks the manifest is complete, but a
+      # complete manifest pointing at a dead URL still fails the build - and fails it at
+      # configuration time, because jarDependency downloads eagerly. Reported as a notice rather
+      # than a failure so a publisher outage does not block unrelated work.
+      - name: Probe external asset reachability
+        shell: bash
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          assets = json.load(open('config/assets-manifest.json'))['assets']
+          bad = []
+          for a in assets:
+              out = subprocess.run(
+                  ['curl', '-sSIL', '--max-time', '45', '-o', '/dev/null', '-w', '%{http_code}', a['url']],
+                  capture_output=True, text=True)
+              code = (out.stdout or '000').strip().split()[0]
+              ok = code.startswith(('200', '206'))
+              if not ok:
+                  bad.append((a['id'], code, a['url']))
+              print(f"{'OK  ' if ok else 'FAIL'} {code} {a['id']:38} {a['size']/1e6:8.1f}MB")
+          print()
+          if bad:
+              print(f"::warning title=Unreachable assets::{len(bad)} of {len(assets)} asset URLs did not respond")
+              for i, c, u in bad:
+                  print(f"  {i} [{c}] {u}")
+          else:
+              print(f"All {len(assets)} asset URLs reachable.")
+          PY
+
       - name: Verify external asset manifest provenance when signed
         shell: bash
         env:
