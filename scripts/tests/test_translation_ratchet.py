@@ -11,14 +11,14 @@ from scripts import translation_ratchet as ratchet
 
 BASE = """<?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string name="greeting">Hello %1$s</string>
-  <string name="plain">Plain text</string>
-  <string name="count">%1$d of %2$d</string>
-  <string name="internal" translatable="false">do not translate</string>
-  <plurals name="files">
+<string name="greeting">Hello %1$s</string>
+<string name="plain">Plain text</string>
+<string name="count">%1$d of %2$d</string>
+<string name="internal" translatable="false">do not translate</string>
+<plurals name="files">
 	<item quantity="one">%1$d file</item>
 	<item quantity="other">%1$d files</item>
-  </plurals>
+</plurals>
 </resources>
 """
 
