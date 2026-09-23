@@ -106,6 +106,13 @@ jobs:
           python3 scripts/target_sdk_readiness.py --report
           python3 scripts/target_sdk_readiness.py
 
+      - name: Check shared storage ratchet
+        shell: bash
+        run: |
+          python3 -m unittest scripts.tests.test_shared_storage_ratchet -v
+          python3 scripts/shared_storage_ratchet.py --report
+          python3 scripts/shared_storage_ratchet.py
+
       - name: Configure transferred-repository formatting baseline
         shell: bash
         run: |

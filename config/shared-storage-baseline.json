@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "comment": "Direct shared-storage call sites accepted while ADR 0016 (scoped workspace storage) is being implemented. Shrink this list; never grow it.",
+  "adr": "docs/adr/0016-scoped-workspace-storage-model.md",
+  "accepted": [
+    {
+      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/activities/SetupState.kt:120",
+      "id": "external-storage-root",
+      "location": "app/src/main/java/com/itsaky/androidide/activities/SetupState.kt:120",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/app/CredentialProtectedApplicationLoader.kt:288",
+      "id": "external-storage-root",
+      "location": "app/src/main/java/com/itsaky/androidide/app/CredentialProtectedApplicationLoader.kt:288",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:36",
+      "id": "external-storage-root",
+      "location": "app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:36",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:39",
+      "id": "external-storage-root",
+      "location": "app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:39",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:42",
+      "id": "external-storage-root",
+      "location": "app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:42",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:46",
+      "id": "external-storage-root",
+      "location": "app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:46",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "all-files-access:app/src/main/java/com/itsaky/androidide/utils/PermissionsHelper.kt:113",
+      "id": "all-files-access",
+      "location": "app/src/main/java/com/itsaky/androidide/utils/PermissionsHelper.kt:113",
+      "summary": "Depends on all-files access, the permission ADR 0016 aims to drop."
+    },
+    {
+      "key": "external-storage-root:common/src/main/java/com/itsaky/androidide/documentation/DocumentationRequestInterceptor.kt:176",
+      "id": "external-storage-root",
+      "location": "common/src/main/java/com/itsaky/androidide/documentation/DocumentationRequestInterceptor.kt:176",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "external-storage-root:common/src/main/java/com/itsaky/androidide/documentation/DocumentationRequestInterceptor.kt:50",
+      "id": "external-storage-root",
+      "location": "common/src/main/java/com/itsaky/androidide/documentation/DocumentationRequestInterceptor.kt:50",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "external-storage-root:common/src/main/java/com/itsaky/androidide/fragments/BaseFragment.kt:134",
+      "id": "external-storage-root",
+      "location": "common/src/main/java/com/itsaky/androidide/fragments/BaseFragment.kt:134",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "external-storage-root:common/src/main/java/com/itsaky/androidide/fragments/BaseFragment.kt:140",
+      "id": "external-storage-root",
+      "location": "common/src/main/java/com/itsaky/androidide/fragments/BaseFragment.kt:140",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "external-storage-root:common/src/main/java/com/itsaky/androidide/fragments/BaseFragment.kt:96",
+      "id": "external-storage-root",
+      "location": "common/src/main/java/com/itsaky/androidide/fragments/BaseFragment.kt:96",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "external-storage-root:common/src/main/java/com/itsaky/androidide/utils/Environment.java:142",
+      "id": "external-storage-root",
+      "location": "common/src/main/java/com/itsaky/androidide/utils/Environment.java:142",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "external-storage-root:common/src/main/java/com/itsaky/androidide/utils/Environment.java:157",
+      "id": "external-storage-root",
+      "location": "common/src/main/java/com/itsaky/androidide/utils/Environment.java:157",
+      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
+    },
+    {
+      "key": "public-directory:common/src/main/java/com/itsaky/androidide/utils/FeatureFlags.kt:41",
+      "id": "public-directory",
+      "location": "common/src/main/java/com/itsaky/androidide/utils/FeatureFlags.kt:41",
+      "summary": "Targets a public shared directory, which scoped storage restricts from API 29."
+    },
+    {
+      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeEditorServiceImpl.kt:531",
+      "id": "hardcoded-storage-path",
+      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeEditorServiceImpl.kt:531",
+      "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
+    },
+    {
+      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeEditorServiceImpl.kt:532",
+      "id": "hardcoded-storage-path",
+      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeEditorServiceImpl.kt:532",
+      "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
+    },
+    {
+      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeProjectServiceImpl.kt:210",
+      "id": "hardcoded-storage-path",
+      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeProjectServiceImpl.kt:210",
+      "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
+    },
+    {
+      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeProjectServiceImpl.kt:211",
+      "id": "hardcoded-storage-path",
+      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/IdeProjectServiceImpl.kt:211",
+      "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
+    },
+    {
+      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:22",
+      "id": "hardcoded-storage-path",
+      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:22",
+      "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
+    },
+    {
+      "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:23",
+      "id": "hardcoded-storage-path",
+      "location": "plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:23",
+      "summary": "Hardcodes a shared storage path that does not exist on every device or user profile."
+    }
+  ]
+}

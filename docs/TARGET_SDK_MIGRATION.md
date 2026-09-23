@@ -70,6 +70,16 @@ manifest edit:
 * SAF tree grants for projects the user deliberately keeps outside that workspace;
 * a migration path for projects already living on shared storage.
 
-This is the work that gates API 30, and it should be designed before it is coded. Raising
-`TARGET_SDK` is the last commit of the sequence, not the first, and every step must keep the
-ratchet green.
+This is the work that gates API 30, and it should be designed before it is coded. That design is
+now written down as [ADR 0016](adr/0016-scoped-workspace-storage-model.md): an app-owned workspace
+as the default project root, SAF tree grants treated as capabilities rather than as a path picker,
+and a single storage gateway in `:common` that all shared-storage access must go through.
+
+A second ratchet, `scripts/shared_storage_ratchet.py`, guards that migration the same way this one
+guards the manifest. It inventories every direct shared-storage call site outside the gateway --
+21 at the time of writing, recorded in `config/shared-storage-baseline.json` -- and fails CI when a
+new one appears or when a removed one is left baselined. The list is the migration's burn-down
+chart.
+
+Raising `TARGET_SDK` is the last commit of the sequence, not the first, and every step must keep
+both ratchets green.
