@@ -108,6 +108,17 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # The raw job log is served from a storage domain that is not reachable everywhere, so the
+      # log is also published as an artifact, which downloads through the API.
+      - name: Upload the build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: assemble-log
+          path: assemble.log
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Locate and describe the APK
         id: find_apk
         run: |
