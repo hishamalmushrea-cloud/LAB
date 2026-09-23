@@ -112,6 +112,19 @@ jobs:
                   print(f"  {i} [{c}] {u}")
           else:
               print(f"All {len(assets)} asset URLs reachable.")
+
+          # Also write to the step summary: raw job logs live on a storage domain that is not
+          # always reachable, but the summary comes back through the API.
+          import os
+          summary = os.environ.get('GITHUB_STEP_SUMMARY')
+          if summary:
+              with open(summary, 'a') as fh:
+                  fh.write(f"## External asset reachability\n\n")
+                  fh.write(f"{len(assets) - len(bad)}/{len(assets)} reachable\n\n")
+                  if bad:
+                      fh.write("| asset | code |\n|---|---|\n")
+                      for i, c, u in bad:
+                          fh.write(f"| {i} | {c} |\n")
           PY
 
       - name: Verify external asset manifest provenance when signed
