@@ -83,6 +83,25 @@ jobs:
           }
           JSON
 
+      # AGP generates ~/.android/debug.keystore itself when it is missing, but that code path calls
+      # into a BouncyCastle class (asn1.edec.EdECObjectIdentifiers) that is not on the runtime
+      # classpath here, so validateSigningV8Debug dies with NoClassDefFoundError. Creating the
+      # keystore up front with keytool avoids the generator entirely. The values are the ones AGP
+      # itself uses, so the result is an ordinary debug keystore.
+      - name: Pre-create the Android debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -keypass android \
+              -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" \
+            -storepass android | head -8
+
       - name: Install advancecomp (advzip, used by recompressApk)
         run: |
           command -v advzip || { sudo apt-get update && sudo apt-get install -y advancecomp; }
