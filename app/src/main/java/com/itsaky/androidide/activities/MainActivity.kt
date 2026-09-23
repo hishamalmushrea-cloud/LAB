@@ -52,6 +52,7 @@ import com.itsaky.androidide.idetooltips.TooltipManager
 import com.itsaky.androidide.idetooltips.TooltipTag.PROJECT_RECENT_TOP
 import com.itsaky.androidide.idetooltips.TooltipTag.SETUP_OVERVIEW
 import com.itsaky.androidide.localWebServer.LocalWebServerSecurity
+import com.itsaky.androidide.localWebServer.DeveloperOverrides
 import com.itsaky.androidide.localWebServer.ServerConfig
 import com.itsaky.androidide.localWebServer.WebServer
 import com.itsaky.androidide.models.DeepLinkRequest
@@ -608,12 +609,19 @@ class MainActivity : EdgeToEdgeIDEActivity() {
 			try {
 				val dbFile = Environment.DOC_DB
 				log.info("Starting WebServer - using database file from: {}", dbFile.absolutePath)
+				// Developer switches live in app-private storage and only exist for a debug build;
+				// see DeveloperOverrides for why they are no longer files on shared storage.
+				val overrides = DeveloperOverrides.forDebugBuild(BuildConfig.DEBUG, filesDir)
 				val server =
 					WebServer(
 						ServerConfig(
 							databasePath = dbFile.absolutePath,
 							sessionToken = sessionToken,
 							diagnosticsEnabled = BuildConfig.DEBUG,
+							debugDatabasePath = overrides.debugDatabasePath,
+							debugEnablePath = overrides.debugEnablePath,
+							experimentsEnablePath = overrides.experimentsEnablePath,
+							clearCacheEnablePath = overrides.clearCacheEnablePath,
 						),
 					)
 				webServer = server

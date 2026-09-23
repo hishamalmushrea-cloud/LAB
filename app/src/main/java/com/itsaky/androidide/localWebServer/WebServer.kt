@@ -2,7 +2,6 @@ package com.itsaky.androidide.localWebServer
 
 import android.database.sqlite.SQLiteDatabase
 import android.net.TrafficStats
-import android.os.Environment.getExternalStorageDirectory
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.annotations.SerializedName
@@ -32,19 +31,15 @@ data class ServerConfig(
 	val diagnosticsEnabled: Boolean = false,
 	val bindName: String = "localhost",
 	val clientRequestTimeoutMs: Int = 2_000,
-	val debugDatabasePath: String =
-		getExternalStorageDirectory().toString() +
-			"/Download/documentation.db",
-	val debugEnablePath: String =
-		getExternalStorageDirectory().toString() +
-			"/Download/CodeOnTheGo.webserver.debug",
-	val experimentsEnablePath: String =
-		getExternalStorageDirectory().toString() +
-			"/Download/CodeOnTheGo.exp",
+	// Developer override switches. These have no default: they used to point at world-writable
+	// files under shared Download/, where any app with storage access could turn on verbose
+	// request logging in a release build. See DeveloperOverrides, and pass
+	// DeveloperOverrides.forDebugBuild(...) from the caller that knows the build type.
 	// TODO: Centralize this concept. --DS, 9-Feb-2026
-	val clearCacheEnablePath: String =
-		getExternalStorageDirectory().toString() +
-			"/Download/CodeOnTheGo.webserver.cs0",
+	val debugDatabasePath: String,
+	val debugEnablePath: String,
+	val experimentsEnablePath: String,
+	val clearCacheEnablePath: String,
 	// Yes, this is hack code.
 	val projectDatabasePath: String = "/data/data/com.itsaky.androidide/databases/RecentProject_database",
 	// ADFA-5175: how often the sdcard debug database may be stat'ed. It lives on FUSE-backed

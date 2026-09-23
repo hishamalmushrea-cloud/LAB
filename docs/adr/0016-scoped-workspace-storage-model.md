@@ -48,9 +48,12 @@ Adopt a **workspace-first storage model with a single gateway**, in this order:
 3. **One gateway.** All shared-storage access goes through a single `:common` component. Feature
    code must not call `Environment.getExternalStorageDirectory()` directly. This is what makes the
    migration reviewable: the gateway's surface is the exhaustive list of what still needs porting.
-4. **Developer switches stop being files on shared storage.** The `WebServer` sentinels and the
-   documentation disable flag become app-private settings (debug builds only), removing four of the
-   19 call sites without any user-visible change.
+4. **Developer switches stop being files on shared storage.** *(Done for the `WebServer`
+   sentinels: see `DeveloperOverrides`.)* They were world-writable files under shared `Download/`,
+   so another app holding storage access could plant `CodeOnTheGo.webserver.debug` and turn on
+   verbose request logging - request lines and rendered HTML - in someone's release build. They now
+   live in the app's own files directory and resolve to unreachable paths in a release build. The
+   documentation disable sentinel still needs the same treatment.
 5. **Explicit import/export at the boundary.** Getting a project in or out of the workspace is a
    deliberate, visible action rather than a side effect of where a file happens to sit.
 6. **`TARGET_SDK` rises last.** Each step above keeps the target SDK ratchet green; the version bump

@@ -16,30 +16,6 @@
       "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
     },
     {
-      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:36",
-      "id": "external-storage-root",
-      "location": "app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:36",
-      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
-    },
-    {
-      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:39",
-      "id": "external-storage-root",
-      "location": "app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:39",
-      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
-    },
-    {
-      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:42",
-      "id": "external-storage-root",
-      "location": "app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:42",
-      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
-    },
-    {
-      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:46",
-      "id": "external-storage-root",
-      "location": "app/src/main/java/com/itsaky/androidide/localWebServer/WebServer.kt:46",
-      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
-    },
-    {
       "key": "all-files-access:app/src/main/java/com/itsaky/androidide/utils/PermissionsHelper.kt:113",
       "id": "all-files-access",
       "location": "app/src/main/java/com/itsaky/androidide/utils/PermissionsHelper.kt:113",
