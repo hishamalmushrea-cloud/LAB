@@ -1,0 +1,32 @@
+name: Asset reachability probe
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe every external asset URL
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          assets = json.load(open('config/assets-manifest.json'))['assets']
+          bad = []
+          for a in assets:
+              url = a['url']
+              out = subprocess.run(
+                  ['curl','-sSIL','--max-time','45','-o','/dev/null',
+                   '-w','%{http_code} %{size_download} %{url_effective}', url],
+                  capture_output=True, text=True)
+              code = out.stdout.split(' ')[0] if out.stdout else '000'
+              status = 'OK ' if code.startswith(('200','206')) else 'FAIL'
+              if status == 'FAIL':
+                  bad.append((a['id'], code, url))
+              print(f"{status} {code} {a['id']:38} {a['size']/1e6:8.1f}MB")
+          print()
+          if bad:
+              print(f"UNREACHABLE: {len(bad)}/{len(assets)}")
+              for i,c,u in bad: print(f"  {i} [{c}] {u}")
+          else:
+              print(f"All {len(assets)} asset URLs reachable.")
+          PY
