@@ -176,7 +176,11 @@
   <string name="title_generating_xml">إنشاء كود XML</string>
   <string name="msg_swipe_up">مرر لأعلى للإخراج والسجلات والمزيد.</string>
   <string name="msg_ide_crashed">تحطم Code on the Go</string>
-  <string name="msg_crash_info">الرجاء فتح مشكلة على github مع المكونات التالية:</string>
+  <string name="msg_crash_info">حدث خطأ داخلي.\\n\\nتم حفظ التفاصيل التي تساعدنا على إصلاح
+		المشكلة، وسيتم إرسالها بشكل آمن في المرة القادمة التي يتصل فيها جهازك بالإنترنت.\\n\\nعند
+		الضغط على «موافق» سيُغلق التطبيق وقد تفقد أي تغييرات غير محفوظة. الرجاء إعادة تشغيل التطبيق
+		للمتابعة.\\n\\nإذا تكرر الخطأ، جرّب إعادة تشغيل جهازك. وإذا استمرت المشكلة، الرجاء %1$s</string>
+  <string name="contact_support_team">التواصل مع فريق الدعم لدينا.</string>
   <string name="msg_close_crash_page">انقر على الزر أدناه لنسخ السجل وفتح صفحة المشكلات.</string>
   <string name="title_translations">الترجمات</string>
   <string name="action_expand_selection">توسيع التحديد</string>

@@ -176,7 +176,6 @@
   <string name="title_generating_xml">Gerando código XML</string>
   <string name="msg_swipe_up">Deslize para cima para ver a saída de compilação, logs e mais.</string>
   <string name="msg_ide_crashed">Code on the Go parou</string>
-  <string name="msg_crash_info">Abra um problema no github com o seguinte stacktrace:</string>
   <string name="msg_close_crash_page">Clique no botão abaixo para copiar o registro e abrir a página de issues.</string>
   <string name="title_translations">Traduções</string>
   <string name="action_expand_selection">Expandir seleção</string>

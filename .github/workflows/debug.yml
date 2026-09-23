@@ -113,6 +113,16 @@ jobs:
           python3 scripts/shared_storage_ratchet.py --report
           python3 scripts/shared_storage_ratchet.py
 
+      # Placeholder mismatches fail unconditionally: a translation whose format specifiers differ
+      # from the base string is broken at runtime, not merely untranslated. Untranslated strings
+      # fall back to English and are held at a baseline that may only shrink.
+      - name: Check translation ratchet
+        shell: bash
+        run: |
+          python3 -m unittest scripts.tests.test_translation_ratchet -v
+          python3 scripts/translation_ratchet.py --report
+          python3 scripts/translation_ratchet.py
+
       - name: Configure transferred-repository formatting baseline
         shell: bash
         run: |

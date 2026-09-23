@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "comment": "Untranslated strings per locale. These fall back to English, so they are a tracked debt rather than a defect; the numbers may only shrink. Placeholder mismatches are not baselined - they are always errors. See docs/audits for the roadmap item.",
+  "baseStringCount": 1300,
+  "missingByLocale": {
+    "ar-rSA": 851,
+    "bn-rIN": 853,
+    "de-rDE": 853,
+    "es-rES": 853,
+    "fr-rFR": 853,
+    "hi-rIN": 853,
+    "in-rID": 235,
+    "pt-rBR": 853,
+    "ro-rRO": 853,
+    "ru-rRU": 852,
+    "tr-rTR": 853,
+    "zh-rCN": 267
+  }
+}
