@@ -1,0 +1,154 @@
+name: Build installable debug APK
+
+# The upstream APK job runs on a self-hosted runner and needs organisation secrets, so it is
+# skipped in this fork and nobody has ever produced an installable artifact from this branch.
+# Everything CI proved so far was compilation; assembling an APK additionally exercises manifest
+# merging, resource linking, asset packaging and signing, which is where a build of this shape
+# actually tends to break.
+#
+# This job is deliberately self-contained: the free ubuntu-latest runner, the debug keystore the
+# Android plugin generates, and a non-secret google-services.json copied from the one debug.yml
+# already uses for verification.
+
+on:
+  push:
+    branches:
+      - arena/01a0cae9-lab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Assemble v8 debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out the branch
+        uses: actions/checkout@v4
+
+      # The build downloads ~2.6 GB of external assets on top of the SDK and NDK, and the hosted
+      # runner ships with roughly 25 GB free. Reclaiming the preinstalled toolchains this build
+      # never touches buys the headroom cheaply.
+      - name: Reclaim runner disk space
+        run: |
+          echo "before:"; df -h / | tail -1
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/ndk \
+            /opt/ghc /usr/local/.ghcup /usr/local/share/powershell \
+            /usr/share/swift /usr/local/share/chromium || true
+          sudo apt-get clean || true
+          echo "after:"; df -h / | tail -1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install Android SDK 36
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-36 build-tools;36.0.0'
+
+      - name: Install the NDK and CMake the app configuration requires
+        run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" 'ndk;29.0.14206865' 'cmake;3.22.1'
+
+      # Same non-secret placeholder debug.yml uses. The google-services plugin refuses to configure
+      # without this file, but a debug build never contacts Firebase, so real credentials are not
+      # needed to prove the APK assembles.
+      - name: Create non-secret google-services.json
+        run: |
+          cat > app/google-services.json <<'JSON'
+          {
+            "project_info": {
+              "project_number": "0",
+              "project_id": "local-verification",
+              "storage_bucket": "local-verification.invalid"
+            },
+            "client": [{
+              "client_info": {
+                "mobilesdk_app_id": "1:0:android:0000000000000000",
+                "android_client_info": {"package_name": "com.itsaky.androidide"}
+              },
+              "api_key": [{"current_key": "not-a-secret"}]
+            }],
+            "configuration_version": "1"
+          }
+          JSON
+
+      - name: Install advancecomp (advzip, used by recompressApk)
+        run: |
+          command -v advzip || { sudo apt-get update && sudo apt-get install -y advancecomp; }
+
+      # v8 is the arm64-v8a flavor, which is what a modern phone needs. Not using the flox wrapper
+      # here: flox provides the toolchain on the self-hosted runner, whereas this job installs the
+      # JDK and SDK itself through the setup actions above.
+      - name: Assemble the APK
+        id: assemble
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleV8Debug --no-daemon --stacktrace 2>&1 | tee assemble.log
+
+      - name: Summarise a failure
+        if: failure() && steps.assemble.outcome == 'failure'
+        run: |
+          {
+            echo '## Assemble failed'
+            echo '```text'
+            grep -E "^(e: |error: |FAILURE|Caused by|\s+at )" assemble.log | tail -60 || true
+            echo '--- tail ---'
+            tail -n 120 assemble.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Locate and describe the APK
+        id: find_apk
+        run: |
+          apk=$(find app/build/outputs/apk -name '*.apk' -path '*v8*' | head -n 1)
+          if [ -z "$apk" ]; then
+            echo "No APK produced." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "APK_PATH=$apk" >> "$GITHUB_OUTPUT"
+          size=$(stat -c '%s' "$apk")
+          {
+            echo '## APK built'
+            echo ''
+            echo "| field | value |"
+            echo "|---|---|"
+            echo "| file | \`$(basename "$apk")\` |"
+            echo "| size | $(numfmt --to=iec "$size") |"
+            echo "| sha256 | \`$(sha256sum "$apk" | cut -d' ' -f1)\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Proves the artifact is a well-formed, signed, installable package rather than just a file
+      # that exists: aapt2 reads the merged manifest back out, and apksigner verifies the v2/v3
+      # signature the debug config enables.
+      - name: Verify the APK is well formed and signed
+        run: |
+          BT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools/36.0.0"
+          APK="${{ steps.find_apk.outputs.APK_PATH }}"
+          "$BT/aapt2" dump badging "$APK" | head -20 | tee badging.txt
+          "$BT/apksigner" verify --print-certs "$APK" && echo "signature OK"
+          {
+            echo ''
+            echo '### Manifest as built'
+            echo '```text'
+            grep -E "package:|sdkVersion|targetSdkVersion|native-code|application-label" badging.txt || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: cogo-v8-debug-apk
+          path: ${{ steps.find_apk.outputs.APK_PATH }}
+          if-no-files-found: error
+          retention-days: 30
