@@ -194,6 +194,14 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+          # Also as a notice: the step summary is not retrievable through the REST API, and these
+          # facts - ABI, min/target SDK, signature - are exactly what has to be confirmed before
+          # telling someone the artifact is safe to install.
+          facts=$(grep -E "package:|sdkVersion|native-code|application-label:" badging.txt | tr '\n' '; ')
+          sha=$(sha256sum "$APK" | cut -d' ' -f1)
+          size=$(stat -c '%s' "$APK")
+          echo "::notice title=APK facts::$(basename "$APK") | $(numfmt --to=iec "$size") | sha256=$sha | $facts"
+
       - name: Upload the APK
         uses: actions/upload-artifact@v4
         with:
