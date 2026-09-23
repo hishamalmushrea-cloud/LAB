@@ -96,15 +96,27 @@ jobs:
           set -o pipefail
           ./gradlew :app:assembleV8Debug --no-daemon --stacktrace 2>&1 | tee assemble.log
 
-      - name: Summarise a failure
+      # Emitted as ::error:: annotations, not just into the summary: both the raw log and
+      # artifacts are served from a storage domain that is not reachable everywhere, whereas
+      # annotations come back through the REST API.
+      - name: Report the failure
         if: failure() && steps.assemble.outcome == 'failure'
         run: |
+          python3 - assemble.log <<'PY'
+          import sys
+          lines = open(sys.argv[1], errors='replace').read().splitlines()
+          keep = [l for l in lines if l.startswith(('e: ', 'error: ', 'FAILURE', 'Caused by',
+                                                    '* What went wrong', '* Try', 'Execution failed'))]
+          tail = [l for l in lines if not l.startswith(('w: ', 'warning: '))][-80:]
+          text = '\n'.join(keep[-60:] + ['--- tail ---'] + tail)
+          for i in range(0, len(text), 3000):
+              chunk = text[i:i + 3000].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::error title=Assemble failure (part {i // 3000 + 1})::{chunk}')
+          PY
           {
             echo '## Assemble failed'
             echo '```text'
-            grep -E "^(e: |error: |FAILURE|Caused by|\s+at )" assemble.log | tail -60 || true
-            echo '--- tail ---'
-            tail -n 120 assemble.log
+            tail -n 150 assemble.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
