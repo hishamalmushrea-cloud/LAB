@@ -81,59 +81,62 @@ class FeatureFlagSourceTest {
 	}
 
 	@Test
-	fun `a planted flag on shared storage no longer has any effect`() = runTest {
-		// The regression this whole change exists for. The old code read sentinels from the public
-		// Downloads directory; this asserts that planting one there is now inert, which is a
-		// stronger claim than merely showing the new location works.
-		val downloads = temporaryFolder.newFolder("Download")
-		plant(downloads, "CodeOnTheGo.exp")
-		plant(downloads, "S153.txt")
-		plant(downloads, "CodeOnTheGo.a2s2")
+	fun `a planted flag on shared storage no longer has any effect`() =
+		runTest {
+			// The regression this whole change exists for. The old code read sentinels from the public
+			// Downloads directory; this asserts that planting one there is now inert, which is a
+			// stronger claim than merely showing the new location works.
+			val downloads = temporaryFolder.newFolder("Download")
+			plant(downloads, "CodeOnTheGo.exp")
+			plant(downloads, "S153.txt")
+			plant(downloads, "CodeOnTheGo.a2s2")
 
-		val filesDir = temporaryFolder.newFolder("files")
-		FeatureFlags.initialize(FeatureFlagSource.forDebugBuild(isDebugBuild = true, filesDir = filesDir))
+			val filesDir = temporaryFolder.newFolder("files")
+			FeatureFlags.initialize(FeatureFlagSource.forDebugBuild(isDebugBuild = true, filesDir = filesDir))
 
-		assertThat(FeatureFlags.isExperimentsEnabled).isFalse()
-		assertThat(FeatureFlags.isEmulatorUseEnabled).isFalse()
-		assertThat(FeatureFlags.isPardonEnabled).isFalse()
-	}
-
-	@Test
-	fun `initialize reads every flag from the app-private directory`() = runTest {
-		val filesDir = temporaryFolder.newFolder("files")
-		val flagsDir = File(filesDir, FeatureFlagSource.FLAGS_DIR_NAME)
-		for (name in listOf(
-			"CodeOnTheGo.exp",
-			"CodeOnTheGo.logd",
-			"S153.txt",
-			"CodeOnTheGo.a3s19",
-			"CodeOnTheGo.a2s2",
-			"CodeOnTheGo.lc",
-		)) {
-			plant(flagsDir, name)
+			assertThat(FeatureFlags.isExperimentsEnabled).isFalse()
+			assertThat(FeatureFlags.isEmulatorUseEnabled).isFalse()
+			assertThat(FeatureFlags.isPardonEnabled).isFalse()
 		}
 
-		FeatureFlags.initialize(FeatureFlagSource.inFilesDir(filesDir))
+	@Test
+	fun `initialize reads every flag from the app-private directory`() =
+		runTest {
+			val filesDir = temporaryFolder.newFolder("files")
+			val flagsDir = File(filesDir, FeatureFlagSource.FLAGS_DIR_NAME)
+			for (name in listOf(
+				"CodeOnTheGo.exp",
+				"CodeOnTheGo.logd",
+				"S153.txt",
+				"CodeOnTheGo.a3s19",
+				"CodeOnTheGo.a2s2",
+				"CodeOnTheGo.lc",
+			)) {
+				plant(flagsDir, name)
+			}
 
-		assertThat(FeatureFlags.isExperimentsEnabled).isTrue()
-		assertThat(FeatureFlags.isDebugLoggingEnabled).isTrue()
-		assertThat(FeatureFlags.isEmulatorUseEnabled).isTrue()
-		assertThat(FeatureFlags.isReprieveEnabled).isTrue()
-		assertThat(FeatureFlags.isPardonEnabled).isTrue()
-		assertThat(FeatureFlags.isLeakCanaryDumpInhibited).isTrue()
-	}
+			FeatureFlags.initialize(FeatureFlagSource.inFilesDir(filesDir))
+
+			assertThat(FeatureFlags.isExperimentsEnabled).isTrue()
+			assertThat(FeatureFlags.isDebugLoggingEnabled).isTrue()
+			assertThat(FeatureFlags.isEmulatorUseEnabled).isTrue()
+			assertThat(FeatureFlags.isReprieveEnabled).isTrue()
+			assertThat(FeatureFlags.isPardonEnabled).isTrue()
+			assertThat(FeatureFlags.isLeakCanaryDumpInhibited).isTrue()
+		}
 
 	@Test
-	fun `initialize is idempotent so a later call cannot flip a flag`() = runTest {
-		val filesDir = temporaryFolder.newFolder("files")
-		FeatureFlags.initialize(FeatureFlagSource.inFilesDir(filesDir))
+	fun `initialize is idempotent so a later call cannot flip a flag`() =
+		runTest {
+			val filesDir = temporaryFolder.newFolder("files")
+			FeatureFlags.initialize(FeatureFlagSource.inFilesDir(filesDir))
 
-		val other = temporaryFolder.newFolder("other")
-		plant(File(other, FeatureFlagSource.FLAGS_DIR_NAME), "CodeOnTheGo.exp")
-		FeatureFlags.initialize(FeatureFlagSource.inFilesDir(other))
+			val other = temporaryFolder.newFolder("other")
+			plant(File(other, FeatureFlagSource.FLAGS_DIR_NAME), "CodeOnTheGo.exp")
+			FeatureFlags.initialize(FeatureFlagSource.inFilesDir(other))
 
-		assertThat(FeatureFlags.isExperimentsEnabled).isFalse()
-	}
+			assertThat(FeatureFlags.isExperimentsEnabled).isFalse()
+		}
 
 	@Test
 	fun `flags default to off before initialization`() {

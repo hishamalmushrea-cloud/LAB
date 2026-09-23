@@ -42,12 +42,10 @@ data class FeatureFlagSource(
 		 * The directory is absolute and one the app never creates, so even if [enabled] were
 		 * flipped by a future edit the lookups would still miss.
 		 */
-		fun disabled(): FeatureFlagSource =
-			FeatureFlagSource(directory = File("/nonexistent/cogo-feature-flags"), enabled = false)
+		fun disabled(): FeatureFlagSource = FeatureFlagSource(directory = File("/nonexistent/cogo-feature-flags"), enabled = false)
 
 		/** Switch files under [filesDir], the app-private directory only this app can write. */
-		fun inFilesDir(filesDir: File): FeatureFlagSource =
-			FeatureFlagSource(directory = File(filesDir, FLAGS_DIR_NAME), enabled = true)
+		fun inFilesDir(filesDir: File): FeatureFlagSource = FeatureFlagSource(directory = File(filesDir, FLAGS_DIR_NAME), enabled = true)
 
 		/**
 		 * [inFilesDir] for a debug build, [disabled] for a release build.
