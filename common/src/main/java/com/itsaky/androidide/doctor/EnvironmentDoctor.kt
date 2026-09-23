@@ -60,7 +60,7 @@ object EnvironmentDoctor {
 	private fun storageFindings(snapshot: EnvironmentSnapshot): List<Finding> {
 		val free = snapshot.freeStorageBytes
 		return when {
-			free < MINIMUM_FREE_BYTES ->
+			free < MINIMUM_FREE_BYTES -> {
 				listOf(
 					Finding(
 						id = "storage-critical",
@@ -72,8 +72,9 @@ object EnvironmentDoctor {
 						remedy = Remedy.CLEAR_CACHES,
 					),
 				)
+			}
 
-			free < COMFORTABLE_FREE_BYTES ->
+			free < COMFORTABLE_FREE_BYTES -> {
 				listOf(
 					Finding(
 						id = "storage-low",
@@ -83,8 +84,11 @@ object EnvironmentDoctor {
 						remedy = Remedy.CLEAR_CACHES,
 					),
 				)
+			}
 
-			else -> emptyList()
+			else -> {
+				emptyList()
+			}
 		}
 	}
 
