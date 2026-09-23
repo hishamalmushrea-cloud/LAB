@@ -197,7 +197,10 @@ jobs:
           # Also as a notice: the step summary is not retrievable through the REST API, and these
           # facts - ABI, min/target SDK, signature - are exactly what has to be confirmed before
           # telling someone the artifact is safe to install.
-          facts=$(grep -E "package:|sdkVersion|native-code|application-label:" badging.txt | tr '\n' '; ')
+          # head -20 earlier truncated badging before sdkVersion/native-code, so re-read the full
+          # dump here rather than the trimmed copy.
+          "$BT/aapt2" dump badging "$APK" > badging-full.txt
+          facts=$(grep -E "^(package:|sdkVersion|targetSdkVersion|native-code|application-label:)" badging-full.txt | tr '\n' '; ')
           sha=$(sha256sum "$APK" | cut -d' ' -f1)
           size=$(stat -c '%s' "$APK")
           echo "::notice title=APK facts::$(basename "$APK") | $(numfmt --to=iec "$size") | sha256=$sha | $facts"
