@@ -87,6 +87,5 @@ class DeveloperOverridesTest {
 		}
 	}
 
-	private fun DeveloperOverrides.allPaths() =
-		listOf(debugEnablePath, experimentsEnablePath, clearCacheEnablePath, debugDatabasePath)
+	private fun DeveloperOverrides.allPaths() = listOf(debugEnablePath, experimentsEnablePath, clearCacheEnablePath, debugDatabasePath)
 }
