@@ -26,7 +26,10 @@ class WorkspaceGateway(
 	 */
 	fun buildEligibility(location: WorkspaceLocation): BuildEligibility =
 		when (location) {
-			is WorkspaceLocation.Granted -> BuildEligibility.Blocked(BuildBlocker.NEEDS_IMPORT)
+			is WorkspaceLocation.Granted -> {
+				BuildEligibility.Blocked(BuildBlocker.NEEDS_IMPORT)
+			}
+
 			is WorkspaceLocation.Managed -> {
 				val directory = location.directory
 				when {

@@ -5,6 +5,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.nio.file.Files
 
 /**
  * The layout is the only thing standing between an externally supplied name and the filesystem, so
@@ -102,7 +103,7 @@ class WorkspaceLayoutTest {
 		val layout = layout()
 		val outside = temporaryFolder.newFolder("outside-target")
 		val link = File(temporaryFolder.root, "link")
-		java.nio.file.Files.createSymbolicLink(link.toPath(), outside.toPath())
+		Files.createSymbolicLink(link.toPath(), outside.toPath())
 
 		assertThat(layout.contains(link)).isFalse()
 	}
