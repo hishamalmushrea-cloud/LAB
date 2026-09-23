@@ -25,9 +25,8 @@ class DocumentationRequestInterceptorTest {
 	private lateinit var source: DocumentationContentSource
 
 	/** The switch is off unless a test creates the file; the path is app-private, never shared. */
-	private fun interceptor(
-		sentinel: File = File(folder.root, DocumentationRequestInterceptor.DISABLE_SENTINEL),
-	) = DocumentationRequestInterceptor(source, sentinel)
+	private fun interceptor(sentinel: File = File(folder.root, DocumentationRequestInterceptor.DISABLE_SENTINEL)) =
+		DocumentationRequestInterceptor(source, sentinel)
 
 	@Before
 	fun setUp() {
