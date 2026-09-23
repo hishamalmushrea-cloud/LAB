@@ -10,8 +10,7 @@ This tool inventories those call sites and ratchets them against
 `config/shared-storage-baseline.json`:
 
 	* a call site missing from the baseline fails CI - the debt cannot grow;
-	* a baselined call site that disappeared also fails, so a removal is
-	  locked in by deleting its entry and the list only ever shrinks.
+	* a baselined call site that disappeared also fails, locking in the removal.
 
 Usage:
 	python3 scripts/shared_storage_ratchet.py               # ratchet check
