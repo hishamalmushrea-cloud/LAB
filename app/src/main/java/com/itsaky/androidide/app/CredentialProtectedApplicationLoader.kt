@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.work.WorkManager
 import com.google.android.material.color.DynamicColors
+import com.itsaky.androidide.BuildConfig
 import com.itsaky.androidide.activities.CrashHandlerActivity
 import com.itsaky.androidide.activities.editor.IDELogcatReader
 import com.itsaky.androidide.api.BuildOutputProvider
@@ -26,6 +27,7 @@ import com.itsaky.androidide.ui.themes.IDETheme
 import com.itsaky.androidide.ui.themes.IThemeManager
 import com.itsaky.androidide.utils.EditorDecorationBridge
 import com.itsaky.androidide.utils.Environment
+import com.itsaky.androidide.utils.FeatureFlagSource
 import com.itsaky.androidide.utils.FeatureFlags
 import com.itsaky.androidide.utils.FileUtil
 import com.itsaky.androidide.utils.VMUtils
@@ -101,7 +103,7 @@ internal object CredentialProtectedApplicationLoader : ApplicationLoader {
 
 			Environment.init(app)
 
-			FeatureFlags.initialize()
+			FeatureFlags.initialize(FeatureFlagSource.forDebugBuild(BuildConfig.DEBUG, app.filesDir))
 			LeakCanaryConfig.applyFromFeatureFlags()
 
 			if (!EventBus.getDefault().isRegistered(this)) {

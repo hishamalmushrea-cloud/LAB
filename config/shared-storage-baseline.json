@@ -10,9 +10,9 @@
       "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
     },
     {
-      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/app/CredentialProtectedApplicationLoader.kt:288",
+      "key": "external-storage-root:app/src/main/java/com/itsaky/androidide/app/CredentialProtectedApplicationLoader.kt:290",
       "id": "external-storage-root",
-      "location": "app/src/main/java/com/itsaky/androidide/app/CredentialProtectedApplicationLoader.kt:288",
+      "location": "app/src/main/java/com/itsaky/androidide/app/CredentialProtectedApplicationLoader.kt:290",
       "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
     },
     {
@@ -50,12 +50,6 @@
       "id": "external-storage-root",
       "location": "common/src/main/java/com/itsaky/androidide/utils/Environment.java:157",
       "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
-    },
-    {
-      "key": "public-directory:common/src/main/java/com/itsaky/androidide/utils/FeatureFlags.kt:41",
-      "id": "public-directory",
-      "location": "common/src/main/java/com/itsaky/androidide/utils/FeatureFlags.kt:41",
-      "summary": "Targets a public shared directory, which scoped storage restricts from API 29."
     },
     {
       "key": "hardcoded-storage-path:plugin-manager/src/main/kotlin/com/itsaky/androidide/plugins/manager/services/PluginPathAllowlist.kt:33",

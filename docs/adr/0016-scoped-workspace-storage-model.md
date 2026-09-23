@@ -55,15 +55,29 @@ Adopt a **workspace-first storage model with a single gateway**, in this order:
    live in the app's own files directory and resolve to unreachable paths in a release build. The
    documentation disable sentinel was moved the same way: `DocumentationRequestInterceptor` now
    takes its sentinel path as a constructor argument, resolved next to the documentation database
-   in app-private storage, so a file planted under shared `Download/` has no effect.
-5. **Explicit import/export at the boundary.** Getting a project in or out of the workspace is a
+   in app-private storage, so a file planted under shared `Download/` has no effect. `FeatureFlags`
+   was the third and worst instance and is now fixed the same way, via `FeatureFlagSource`: six
+   switches were read from the *public* Downloads directory with no debug gating at all, so any app
+   with storage access could plant `CodeOnTheGo.exp` to expose unfinished surfaces and raise the
+   minimum free space from 4 GB to 6 GB (enough to stop the app starting), `S153.txt` to re-enable
+   the x86 configuration `SplashActivity` deliberately exits on, or `CodeOnTheGo.a2s2` to switch
+   StrictMode off in a release build. `FeatureFlags.initialize` now requires a `FeatureFlagSource`,
+   so a call site cannot reintroduce a shared-storage read by omission.
+5. **Existing projects stay where they are, reached through a SAF grant.** Decided with the product
+   owner over two alternatives: copying every discovered project into the workspace on first run,
+   and an explicit migration screen. Auto-copying was rejected because it silently doubles disk use
+   on a device that may not have the space — exactly the population this app serves — and because a
+   half-finished copy of someone's work is a worse failure than an extra tap. The cost accepted in
+   exchange is that building a pre-existing project requires an explicit import step; that cost is
+   visible and recoverable, whereas a failed bulk copy is neither.
+6. **Explicit import/export at the boundary.** Getting a project in or out of the workspace is a
    deliberate, visible action rather than a side effect of where a file happens to sit.
-6. **`TARGET_SDK` rises last.** Each step above keeps the target SDK ratchet green; the version bump
+7. **`TARGET_SDK` rises last.** Each step above keeps the target SDK ratchet green; the version bump
    is the final commit of the sequence, not the trigger for it.
 
 Enforcement is mechanical, matching the approach already used for the target SDK:
 `scripts/shared_storage_ratchet.py` records today's 19 call sites in
-`config/shared-storage-baseline.json` and fails CI when a new one appears — or when a baselined one
+`config/shared-storage-baseline.json` — 19 at the time of writing, 10 today — and fails CI when a new one appears — or when a baselined one
 disappears without being removed from the baseline. The debt can only shrink.
 
 ## Consequences

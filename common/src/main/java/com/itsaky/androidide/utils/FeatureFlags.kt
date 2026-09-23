@@ -1,12 +1,11 @@
 package com.itsaky.androidide.utils
 
-import android.os.Environment
+import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
-import java.io.File
 
 private data class FlagsCache(
 	val experimentsEnabled: Boolean = false,
@@ -36,9 +35,6 @@ object FeatureFlags {
 
 	private val mutex = Mutex()
 	private var flags = FlagsCache.DEFAULT
-
-	private val downloadsDir =
-		Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 
 	/**
 	 * Whether Code On the Go experiments are enabled.
@@ -71,23 +67,27 @@ object FeatureFlags {
 		get() = flags.pardonEnabled
 
 	/**
-	 * Whether LeakCanary heap dumping is inhibited (CodeOnTheGo.lc present in Downloads).
+	 * Whether LeakCanary heap dumping is inhibited.
 	 */
 	val isLeakCanaryDumpInhibited: Boolean
 		get() = flags.leakCanaryDumpInhibited
 
 	/**
-	 * Initialize feature flag values. This is thread-safe and idempotent i.e.
+	 * Initialize feature flag values from [source]. This is thread-safe and idempotent i.e.
 	 * subsequent calls do not access disk.
+	 *
+	 * The source is a parameter rather than a constant resolved here because these switches used to
+	 * be read from world-writable shared storage; see [FeatureFlagSource] for what that allowed.
+	 * Requiring the caller to supply it means a call site cannot silently reintroduce that.
 	 */
-	suspend fun initialize(): Unit =
+	suspend fun initialize(source: FeatureFlagSource): Unit =
 		mutex.withLock {
 			if (flags !== FlagsCache.DEFAULT) {
 				// already initialized
 				return@withLock
 			}
 
-			fun checkFlag(fileName: String) = File(downloadsDir, fileName).exists()
+			fun checkFlag(fileName: String) = source.isSet(fileName)
 
 			flags =
 				withContext(Dispatchers.IO) {
@@ -107,4 +107,13 @@ object FeatureFlags {
 					}
 				}
 		}
+
+	/**
+	 * Discards loaded flags so the next [initialize] reads again. Test-only: the flags are a
+	 * process-wide singleton, so without this one test's flags would leak into the next.
+	 */
+	@VisibleForTesting
+	internal fun resetForTest() {
+		flags = FlagsCache.DEFAULT
+	}
 }

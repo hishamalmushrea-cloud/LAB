@@ -25,6 +25,7 @@ import com.itsaky.androidide.preferences.internal.TelemetryConsent
 import com.itsaky.androidide.syntax.colorschemes.SchemeAndroidIDE
 import com.itsaky.androidide.ui.themes.IThemeManager
 import com.itsaky.androidide.utils.Environment
+import com.itsaky.androidide.utils.FeatureFlagSource
 import com.itsaky.androidide.utils.FeatureFlags
 import com.itsaky.androidide.utils.MetricsScratch
 import com.termux.shared.reflection.ReflectionUtils
@@ -73,7 +74,7 @@ internal object DeviceProtectedApplicationLoader :
 			// try to initialize feature flags
 			// this may fail when running in direct boot mode, so we wrap this
 			// in runCatching and ignore errors, if any
-			FeatureFlags.initialize()
+			FeatureFlags.initialize(FeatureFlagSource.forDebugBuild(BuildConfig.DEBUG, app.filesDir))
 		}
 
 		// Enable StrictMode for debug builds
