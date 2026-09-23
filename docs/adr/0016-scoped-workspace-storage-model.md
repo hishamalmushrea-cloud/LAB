@@ -53,7 +53,9 @@ Adopt a **workspace-first storage model with a single gateway**, in this order:
    so another app holding storage access could plant `CodeOnTheGo.webserver.debug` and turn on
    verbose request logging - request lines and rendered HTML - in someone's release build. They now
    live in the app's own files directory and resolve to unreachable paths in a release build. The
-   documentation disable sentinel still needs the same treatment.
+   documentation disable sentinel was moved the same way: `DocumentationRequestInterceptor` now
+   takes its sentinel path as a constructor argument, resolved next to the documentation database
+   in app-private storage, so a file planted under shared `Download/` has no effect.
 5. **Explicit import/export at the boundary.** Getting a project in or out of the workspace is a
    deliberate, visible action rather than a side effect of where a file happens to sit.
 6. **`TARGET_SDK` rises last.** Each step above keeps the target SDK ratchet green; the version bump

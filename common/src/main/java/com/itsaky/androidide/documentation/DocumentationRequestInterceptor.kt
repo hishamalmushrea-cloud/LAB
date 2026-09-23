@@ -17,7 +17,6 @@
 
 package com.itsaky.androidide.documentation
 
-import android.os.Environment.getExternalStorageDirectory
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import com.itsaky.androidide.utils.ContentTypeHeaders
@@ -42,12 +41,17 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class DocumentationRequestInterceptor(
 	private val contentSource: DocumentationContentSource,
+	disableSentinel: File,
 ) {
 	private val log = LoggerFactory.getLogger(DocumentationRequestInterceptor::class.java)
 
 	// Measurement switch: creating the sentinel puts documentation back on the local web server, so
 	// one build can compare both transports. Read once, like the server's other file flags.
-	private val disabled = File(getExternalStorageDirectory(), DISABLE_SENTINEL).exists()
+	//
+	// The path is injected rather than resolved here. It used to be a file under shared Download/,
+	// which any app holding storage access could create -- letting a third party switch a release
+	// build's documentation transport. See developerOverridesDir below and ADR 0016.
+	private val disabled = disableSentinel.exists()
 
 	private val servedRequests = AtomicLong()
 	private val servedBytes = AtomicLong()
@@ -133,7 +137,11 @@ class DocumentationRequestInterceptor(
 		 */
 		internal fun mimeAndCharset(mimeType: String): Pair<String, String?> = ContentTypeHeaders.typeAndCharset(mimeType)
 
-		private const val DISABLE_SENTINEL = "Download/CodeOnTheGo.nointercept"
+		internal const val DISABLE_SENTINEL = "CodeOnTheGo.nointercept"
+		internal const val DEBUG_DATABASE_NAME = "documentation.db"
+
+		/** The app-private directory holding the developer switches; no other app can write it. */
+		internal const val OVERRIDES_DIR_NAME = "documentation-overrides"
 		private const val SERVER_HOST = "localhost"
 		private const val SERVER_PORT = 6174
 
@@ -170,11 +178,14 @@ class DocumentationRequestInterceptor(
 							log.warn("Environment.DOC_DB is not set yet; this documentation request stays on the web server.")
 							null
 						} else {
+							// Sibling of the documentation database, i.e. app-private storage.
+							val overrides = File(database.parentFile, OVERRIDES_DIR_NAME)
 							DocumentationRequestInterceptor(
 								DocumentationContentSource(
 									database,
-									File(getExternalStorageDirectory(), "Download/documentation.db"),
+									File(overrides, DEBUG_DATABASE_NAME),
 								),
+								File(overrides, DISABLE_SENTINEL),
 							).also { sharedInstance = it }
 						}
 					}
@@ -184,8 +195,8 @@ class DocumentationRequestInterceptor(
 		/**
 		 * True once [shared] has been built, without building it. For a caller that wants to read
 		 * [shared] cheaply -- once built, the getter's first line returns it with no lock and no
-		 * stat -- but must not be the touch that constructs it (the constructor stats external
-		 * storage for the sentinel, banned on the main thread).
+		 * stat -- but must not be the touch that constructs it (the constructor stats the
+		 * filesystem for the sentinel, which does not belong on the main thread).
 		 */
 		val isSharedInitialized: Boolean
 			get() = sharedInstance != null

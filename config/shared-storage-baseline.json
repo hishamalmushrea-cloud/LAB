@@ -22,18 +22,6 @@
       "summary": "Depends on all-files access, the permission ADR 0016 aims to drop."
     },
     {
-      "key": "external-storage-root:common/src/main/java/com/itsaky/androidide/documentation/DocumentationRequestInterceptor.kt:176",
-      "id": "external-storage-root",
-      "location": "common/src/main/java/com/itsaky/androidide/documentation/DocumentationRequestInterceptor.kt:176",
-      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
-    },
-    {
-      "key": "external-storage-root:common/src/main/java/com/itsaky/androidide/documentation/DocumentationRequestInterceptor.kt:50",
-      "id": "external-storage-root",
-      "location": "common/src/main/java/com/itsaky/androidide/documentation/DocumentationRequestInterceptor.kt:50",
-      "summary": "Resolves the shared storage root directly instead of using the workspace gateway."
-    },
-    {
       "key": "external-storage-root:common/src/main/java/com/itsaky/androidide/fragments/BaseFragment.kt:134",
       "id": "external-storage-root",
       "location": "common/src/main/java/com/itsaky/androidide/fragments/BaseFragment.kt:134",
