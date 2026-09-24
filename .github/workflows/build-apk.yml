@@ -116,11 +116,24 @@ jobs:
       # v8 is the arm64-v8a flavor, which is what a modern phone needs. Not using the flox wrapper
       # here: flox provides the toolchain on the self-hosted runner, whereas this job installs the
       # JDK and SDK itself through the setup actions above.
+      # gradle.properties asks for -Xmx8g for Gradle *and* -Xmx8g for the Kotlin daemon with
+      # workers.max=30. That suits a workstation; this runner has ~7 GB total, so the two heaps
+      # alone oversubscribe it and the build died with OutOfMemoryError in compileV8DebugKotlin.
+      # An earlier run only survived because more of the graph came from the cache. Overridden on
+      # the command line rather than in gradle.properties so developer machines keep the large
+      # heaps. The add-opens flags are carried over because Gradle replaces jvmargs wholesale.
       - name: Assemble the APK
         id: assemble
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
         run: |
           set -o pipefail
-          ./gradlew :app:assembleV8Debug --no-daemon --stacktrace 2>&1 | tee assemble.log
+          ./gradlew :app:assembleV8Debug \
+            --no-daemon --stacktrace --max-workers=2 \
+            -Dorg.gradle.jvmargs="-Xmx3584m -XX:MaxMetaspaceSize=1g --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED" \
+            -Dkotlin.daemon.jvmargs="-Xmx2048m" \
+            -Dorg.gradle.parallel=false \
+            2>&1 | tee assemble.log
 
       # Emitted as ::error:: annotations, not just into the summary: both the raw log and
       # artifacts are served from a storage domain that is not reachable everywhere, whereas
@@ -222,9 +235,15 @@ jobs:
       # assembleV8Assets only depends on assetsDownloadDebug when not on CI, so the download is
       # requested explicitly here.
       - name: Build the companion assets payload
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
         run: |
           set -o pipefail
-          ./gradlew :app:assetsDownloadDebug :app:assembleV8Assets --no-daemon 2>&1 | tee assets.log
+          ./gradlew :app:assetsDownloadDebug :app:assembleV8Assets \
+            --no-daemon --max-workers=2 \
+            -Dorg.gradle.jvmargs="-Xmx3584m -XX:MaxMetaspaceSize=1g --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED" \
+            -Dorg.gradle.parallel=false \
+            2>&1 | tee assets.log
 
       - name: Describe the assets payload
         id: find_assets
