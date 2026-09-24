@@ -234,7 +234,16 @@ jobs:
       #
       # assembleV8Assets only depends on assetsDownloadDebug when not on CI, so the download is
       # requested explicitly here.
+      # The APK is already uploaded by this point, so the intermediate build tree can go; the
+      # payload needs ~1.2 GB of downloads plus ~1.2 GB for the zip it writes.
+      - name: Free disk before the payload build
+        run: |
+          df -h / | tail -1
+          rm -rf app/build/intermediates || true
+          df -h / | tail -1
+
       - name: Build the companion assets payload
+        id: assets
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
         run: |
@@ -244,6 +253,24 @@ jobs:
             -Dorg.gradle.jvmargs="-Xmx3584m -XX:MaxMetaspaceSize=1g --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED" \
             -Dorg.gradle.parallel=false \
             2>&1 | tee assets.log
+
+      # The assemble step has its own reporter; this one covers the payload build, whose failure
+      # was invisible because annotations are the only channel readable here.
+      - name: Report an assets payload failure
+        if: failure() && steps.assets.outcome == 'failure'
+        run: |
+          df -h / | tail -2
+          python3 - assets.log <<'PY'
+          import sys
+          lines = open(sys.argv[1], errors='replace').read().splitlines()
+          keep = [l for l in lines if l.startswith(('e: ', 'error: ', 'FAILURE', 'Caused by',
+                                                    '* What went wrong', 'Execution failed'))]
+          tail = [l for l in lines if not l.startswith(('w: ', 'warning: '))][-60:]
+          text = '\n'.join(keep[-40:] + ['--- tail ---'] + tail)
+          for i in range(0, len(text), 3000):
+              chunk = text[i:i + 3000].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::error title=Assets payload failure (part {i // 3000 + 1})::{chunk}')
+          PY
 
       - name: Describe the assets payload
         id: find_assets
