@@ -82,23 +82,44 @@ jobs:
           PY
 
       # Gradle keeps getting 404 for android-sdk-arm64-v8a.zip while curl gets bytes from this
-      # same runner. DownloadUtils never sets a User-Agent, so the JVM sends "Java/17.x"; the
-      # other visible difference is the resume Range header. This isolates which one the server
-      # objects to.
+      # same runner. User-Agent and Range were ruled out (all 200/206), so this varies the two
+      # remaining headers the JVM sends and curl does not: Accept-Encoding: identity, which
+      # DownloadUtils sets explicitly, and the JDK's unusual default Accept value.
       - name: Isolate why the JVM download 404s
         if: always()
         run: |
           url=https://appdevforall.org/dev-assets/debug/android-sdk-arm64-v8a.zip
+          jaccept='text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2'
           probe() {
-            code=$(curl -sSL --max-time 60 -o /dev/null -w '%{http_code}' "$@" "$url" || echo 000)
-            echo "$code"
+            curl -sSL --max-time 60 -o /dev/null -w '%{http_code}' "$@" "$url" || echo 000
           }
-          default=$(probe -r 0-1023)
-          javaua=$(probe -r 0-1023 -A "Java/17.0.12")
-          emptyua=$(probe -r 0-1023 -A "")
-          openrange=$(probe -H "Range: bytes=0-" -A "Java/17.0.12" --max-filesize 2000)
-          noRange=$(probe -A "Java/17.0.12" --max-filesize 2000)
-          echo "::notice title=User-Agent probe::curl-default=$default javaUA=$javaua emptyUA=$emptyua javaUA+openRange=$openrange javaUA+noRange=$noRange"
+          a=$(probe -r 0-1023)
+          b=$(probe -r 0-1023 -H 'Accept-Encoding: identity')
+          c=$(probe -r 0-1023 -H "Accept: $jaccept")
+          d=$(probe -r 0-1023 -H 'Accept-Encoding: identity' -H "Accept: $jaccept" -A 'Java/17.0.12')
+          echo "::notice title=Header probe::baseline=$a acceptEncodingIdentity=$b javaAccept=$c allJavaHeaders=$d"
+
+          # And what the JVM itself gets, which is the only request that actually matters.
+          cat > P.java <<'EOF'
+          import java.net.*; import java.io.*;
+          public class P {
+            public static void main(String[] a) throws Exception {
+              for (String[] v : new String[][]{{"plain",null},{"identity","identity"}}) {
+                HttpURLConnection c = (HttpURLConnection) new URL(a[0]).openConnection();
+                c.setInstanceFollowRedirects(true);
+                c.setConnectTimeout(30000); c.setReadTimeout(60000);
+                if (v[1] != null) c.setRequestProperty("Accept-Encoding", v[1]);
+                c.setRequestProperty("Range", "bytes=0-1023");
+                System.out.println("jvm-" + v[0] + "=" + c.getResponseCode()
+                  + " loc=" + c.getHeaderField("Location")
+                  + " server=" + c.getHeaderField("Server"));
+                c.disconnect();
+              }
+            }
+          }
+          EOF
+          out=$(java P.java "$url" 2>&1 | tr '\n' ' ')
+          echo "::notice title=JVM probe::$out"
 
       - name: Publish the table
         if: always()
