@@ -81,6 +81,25 @@ jobs:
           raise SystemExit(1 if bad else 0)
           PY
 
+      # Gradle keeps getting 404 for android-sdk-arm64-v8a.zip while curl gets bytes from this
+      # same runner. DownloadUtils never sets a User-Agent, so the JVM sends "Java/17.x"; the
+      # other visible difference is the resume Range header. This isolates which one the server
+      # objects to.
+      - name: Isolate why the JVM download 404s
+        if: always()
+        run: |
+          url=https://appdevforall.org/dev-assets/debug/android-sdk-arm64-v8a.zip
+          probe() {
+            code=$(curl -sSL --max-time 60 -o /dev/null -w '%{http_code}' "$@" "$url" || echo 000)
+            echo "$code"
+          }
+          default=$(probe -r 0-1023)
+          javaua=$(probe -r 0-1023 -A "Java/17.0.12")
+          emptyua=$(probe -r 0-1023 -A "")
+          openrange=$(probe -H "Range: bytes=0-" -A "Java/17.0.12" --max-filesize 2000)
+          noRange=$(probe -A "Java/17.0.12" --max-filesize 2000)
+          echo "::notice title=User-Agent probe::curl-default=$default javaUA=$javaua emptyUA=$emptyua javaUA+openRange=$openrange javaUA+noRange=$noRange"
+
       - name: Publish the table
         if: always()
         run: cat probe.md >> "$GITHUB_STEP_SUMMARY" || true
