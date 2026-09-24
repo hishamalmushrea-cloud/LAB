@@ -248,11 +248,29 @@ jobs:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
         run: |
           set -o pipefail
-          ./gradlew :app:assetsDownloadDebug :app:assembleV8Assets \
-            --no-daemon --max-workers=2 \
-            -Dorg.gradle.jvmargs="-Xmx3584m -XX:MaxMetaspaceSize=1g --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED" \
-            -Dorg.gradle.parallel=false \
-            2>&1 | tee assets.log
+          # assetsDownloadDebug failed once on "HTTP status 404" for
+          # android-sdk-arm64-v8a.zip, yet a ranged GET against that same URL served bytes
+          # minutes later, so the asset host drops requests intermittently rather than
+          # having lost the file. DownloadUtils does not retry, and a ~1.2 GB download over
+          # nine files is long enough that a single blip wastes the whole job. Downloads
+          # already present and matching their pinned digest are skipped, so a retry only
+          # re-fetches what is actually missing.
+          for attempt in 1 2 3; do
+            echo "::group::Assets payload attempt $attempt"
+            if ./gradlew :app:assetsDownloadDebug :app:assembleV8Assets \
+              --no-daemon --max-workers=2 \
+              -Dorg.gradle.jvmargs="-Xmx3584m -XX:MaxMetaspaceSize=1g --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED" \
+              -Dorg.gradle.parallel=false \
+              2>&1 | tee assets.log; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "Attempt $attempt failed."
+            [ "$attempt" -lt 3 ] && sleep 30
+          done
+          echo "::error title=Assets payload::all 3 attempts failed"
+          exit 1
 
       # The assemble step has its own reporter; this one covers the payload build, whose failure
       # was invisible because annotations are the only channel readable here.
