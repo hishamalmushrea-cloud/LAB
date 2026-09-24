@@ -212,3 +212,51 @@ jobs:
           path: ${{ steps.find_apk.outputs.APK_PATH }}
           if-no-files-found: error
           retention-days: 30
+
+      # A debug build resolves USE_BUNDLED_ASSETS to false, so it installs through
+      # SplitAssetsInstaller, which reads Download/assets-<arch>.zip off the device rather than
+      # reading assets bundled in the APK. Without that file the setup screen fails on Finish with
+      # "Missing installation files", which is what a tester actually hits. The APK alone is
+      # therefore not a usable deliverable; this builds its companion payload.
+      #
+      # assembleV8Assets only depends on assetsDownloadDebug when not on CI, so the download is
+      # requested explicitly here.
+      - name: Build the companion assets payload
+        run: |
+          set -o pipefail
+          ./gradlew :app:assetsDownloadDebug :app:assembleV8Assets --no-daemon 2>&1 | tee assets.log
+
+      - name: Describe the assets payload
+        id: find_assets
+        run: |
+          zip=$(find app/build/outputs/assets -name 'assets-arm64-v8a.zip' | head -n 1)
+          if [ -z "$zip" ]; then
+            echo "::error title=Assets payload::assets-arm64-v8a.zip was not produced"
+            exit 1
+          fi
+          echo "ASSETS_PATH=$zip" >> "$GITHUB_OUTPUT"
+          size=$(stat -c '%s' "$zip")
+          sha=$(sha256sum "$zip" | cut -d' ' -f1)
+          echo "::notice title=Assets payload::$(basename "$zip") | $(numfmt --to=iec "$size") | sha256=$sha"
+          {
+            echo ''
+            echo "### Companion assets payload"
+            echo ''
+            echo "| field | value |"
+            echo "|---|---|"
+            echo "| file | \`$(basename "$zip")\` |"
+            echo "| size | $(numfmt --to=iec "$size") |"
+            echo "| sha256 | \`$sha\` |"
+            echo ''
+            echo "Copy this file to the device at \`Download/assets-arm64-v8a.zip\` before"
+            echo "pressing Finish on the setup screen."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the assets payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: cogo-v8-assets-payload
+          path: ${{ steps.find_assets.outputs.ASSETS_PATH }}
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
