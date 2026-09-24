@@ -365,6 +365,64 @@ jobs:
             echo "pressing Finish on the setup screen."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # The last deliverable failed on the device because its install path was never exercised.
+      # createAssetsZip and AssetsInstallationHelper.expectedEntries agree only by convention, so
+      # this asserts against the real archive: every entry the installer opens must be present and
+      # non-empty, under the exact name it asks for. A rename on either side fails the build here
+      # rather than on someone's phone.
+      - name: Verify the payload carries every entry the installer opens
+        run: |
+          python3 - "${{ steps.find_assets.outputs.ASSETS_PATH }}" <<'PY'
+          import re, sys, zipfile
+
+          consts = open('composite-builds/build-deps-common/constants/src/main/java'
+                        '/org/adfa/constants/constants.kt').read()
+
+          def const(name):
+              m = re.search(r'const val %s = "([^"]*)"' % name, consts)
+              if not m:
+                  sys.exit(f'constant {name} not found')
+              v = m.group(1)
+              # resolve simple ${OTHER} interpolations
+              return re.sub(r'\$\{?(\w+)\}?', lambda g: const(g.group(1)), v)
+
+          required = {
+              'gradle distribution': const('GRADLE_DISTRIBUTION_ARCHIVE_NAME'),
+              'android sdk':         const('ANDROID_SDK_ZIP'),
+              'documentation db':    const('DOCUMENTATION_DB'),
+              'local maven repo':    const('LOCAL_MAVEN_REPO_ARCHIVE_ZIP_NAME'),
+              'gradle api':          const('GRADLE_API_NAME_JAR_ZIP'),
+              'template core':       const('TEMPLATE_CORE_ARCHIVE'),
+              # literals in AssetsInstallationHelper rather than the constants module
+              'bootstrap':           'bootstrap.zip',
+              'plugin artifacts':    'plugin-artifacts.zip',
+          }
+
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              present = {i.filename: i.file_size for i in z.infolist()}
+
+          missing = {k: v for k, v in required.items()
+                     if v not in present or present[v] == 0}
+
+          width = max(len(v) for v in required.values())
+          for label, name in sorted(required.items(), key=lambda kv: kv[1]):
+              size = present.get(name)
+              state = 'MISSING' if size is None else ('EMPTY' if size == 0
+                                                      else f'{size / 1e6:.1f} MB')
+              print(f'{name:<{width}}  {state:>10}   ({label})')
+
+          extra = sorted(set(present) - set(required.values()))
+          if extra:
+              print('\nalso present (not required):',
+                    ', '.join(f'{e} [{present[e] / 1e6:.1f} MB]' for e in extra))
+
+          if missing:
+              detail = ', '.join(f'{k} -> {v}' for k, v in missing.items())
+              print(f'::error title=Payload incomplete::missing or empty: {detail}')
+              sys.exit(1)
+          print(f'\nAll {len(required)} installer entries present and non-empty.')
+          PY
+
       - name: Upload the assets payload
         uses: actions/upload-artifact@v4
         with:
