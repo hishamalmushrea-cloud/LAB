@@ -1,0 +1,86 @@
+# Checks that every URL in the asset manifest actually serves bytes.
+#
+# The probe embedded in debug.yml used `curl -sSIL`, i.e. HEAD. appdevforall.org answers HEAD with
+# 200 for paths it then 404s on GET, so that probe reported all 20 assets healthy while
+# :app:assetsDownloadDebug failed on a 404. Only a ranged GET proves an asset is really fetchable.
+#
+# Runs standalone because the full build takes ~20 minutes and this takes about one.
+name: Probe assets
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/01a0cae9-lab]
+    paths:
+      - config/assets-manifest.json
+      - .github/workflows/probe-assets.yml
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the branch
+        uses: actions/checkout@v4
+
+      - name: Probe every asset URL with a ranged GET
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+
+          assets = json.load(open('config/assets-manifest.json'))['assets']
+          rows = []
+
+          for a in assets:
+              url = a['url']
+              # HEAD first, purely to demonstrate the disagreement that hid this failure.
+              head = subprocess.run(
+                  ['curl', '-sSIL', '--max-time', '45', '-o', '/dev/null',
+                   '-w', '%{http_code}', url],
+                  capture_output=True, text=True)
+              head_code = (head.stdout or '000').strip().split()[0] if head.stdout else '000'
+
+              # A ranged GET asks for real bytes, which is what the Gradle download does.
+              get = subprocess.run(
+                  ['curl', '-sSL', '--max-time', '60', '-r', '0-1023',
+                   '-o', '/tmp/probe.bin', '-w', '%{http_code} %{size_download}', url],
+                  capture_output=True, text=True)
+              parts = (get.stdout or '000 0').strip().split()
+              get_code, got = (parts + ['0'])[0], int((parts + ['0'])[1] or 0)
+
+              ok = get_code.startswith(('200', '206')) and got > 0
+              rows.append((a['id'], head_code, get_code, got, ok, a['size']))
+              print(f"{'OK  ' if ok else 'FAIL'} head={head_code:>3} get={get_code:>3} "
+                    f"bytes={got:>5} {a['id']}")
+
+          bad = [r for r in rows if not r[4]]
+          lying = [r for r in rows if r[1].startswith('200') and not r[4]]
+
+          def emit(level, title, body):
+              body = body.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::{level} title={title}::{body}')
+
+          if bad:
+              emit('error', 'Unreachable assets',
+                   f'{len(bad)} of {len(rows)} asset URLs do not serve bytes:\n' +
+                   '\n'.join(f'  {i} head={h} get={g}' for i, h, g, _, _, _ in bad))
+          else:
+              emit('notice', 'Assets reachable', f'All {len(rows)} asset URLs served bytes.')
+
+          if lying:
+              emit('warning', 'HEAD disagrees with GET',
+                   'These answer HEAD 200 but fail a ranged GET, which is why the '
+                   'HEAD-based probe passed:\n' +
+                   '\n'.join(f'  {i} get={g}' for i, _, g, _, _, _ in lying))
+
+          with open('probe.md', 'w') as fh:
+              fh.write('| asset | HEAD | GET | ok |\n|---|---|---|---|\n')
+              for i, h, g, _, ok, _ in rows:
+                  fh.write(f"| {i} | {h} | {g} | {'yes' if ok else 'NO'} |\n")
+
+          raise SystemExit(1 if bad else 0)
+          PY
+
+      - name: Publish the table
+        if: always()
+        run: cat probe.md >> "$GITHUB_STEP_SUMMARY" || true
