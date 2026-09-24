@@ -242,18 +242,70 @@ jobs:
           rm -rf app/build/intermediates || true
           df -h / | tail -1
 
-      # A standalone job fetches this URL fine with both curl and HttpURLConnection (206), yet it
-      # 404s on all three attempts inside this job. So it is not the request shape but something
-      # about this job's state: either Cloudflare has started refusing this runner after the
-      # assemble step's downloads, or a stale .part file is steering the resume logic. Sampling
-      # the same URL from here, right before the Gradle task, separates those.
-      - name: Sample the failing URL from inside this job
+      # The asset host sits behind Cloudflare and refuses requests from this job intermittently:
+      # a given file 404s on one attempt and returns 206 seconds later, and across runs the
+      # casualty moved from android-sdk-arm64-v8a.zip to core.cgt. DownloadUtils has no retry, so
+      # any single blip fails the task.
+      #
+      # Fetching with curl first, with per-file retries and backoff, then verifying each file
+      # against the digest pinned in the manifest. assetsDownloadDebug skips any destination that
+      # already matches its expected size and SHA-256, so Gradle then does no network I/O at all.
+      # Verification is still fail-closed - a file that does not match its pinned digest is
+      # deleted rather than handed to the build.
+      - name: Prefetch the debug assets
         run: |
-          url=https://appdevforall.org/dev-assets/debug/android-sdk-arm64-v8a.zip
-          code=$(curl -sSL --max-time 60 -r 0-1023 -o /dev/null -w '%{http_code}' "$url" || echo 000)
-          echo "::notice title=Pre-download sample::ranged GET from the build job = $code"
-          echo "assets dir before download:"
-          ls -la assets 2>/dev/null | head -30 || echo "  (no assets directory)"
+          python3 - <<'PY'
+          import hashlib, json, os, subprocess, sys, time
+
+          assets = [a for a in json.load(open('config/assets-manifest.json'))['assets']
+                    if a.get('variant') == 'debug']
+
+          def digest(path):
+              h = hashlib.sha256()
+              with open(path, 'rb') as fh:
+                  for block in iter(lambda: fh.read(1 << 20), b''):
+                      h.update(block)
+              return h.hexdigest()
+
+          failed = []
+          for a in assets:
+              dest, url = a['localPath'], a['url']
+              os.makedirs(os.path.dirname(dest) or '.', exist_ok=True)
+
+              if os.path.exists(dest) and os.path.getsize(dest) == a['size'] \
+                      and digest(dest) == a['sha256']:
+                  print(f"cached   {a['id']}")
+                  continue
+
+              for attempt in range(1, 6):
+                  # --retry covers curl's own transient view of things; the outer loop covers a
+                  # 404 from Cloudflare, which curl does not consider retryable.
+                  r = subprocess.run(
+                      ['curl', '-sSL', '--fail', '--max-time', '900',
+                       '--retry', '3', '--retry-delay', '5', '--retry-all-errors',
+                       '-o', dest, url])
+                  if r.returncode == 0 and os.path.exists(dest) \
+                          and os.path.getsize(dest) == a['size']:
+                      got = digest(dest)
+                      if got == a['sha256']:
+                          print(f"ok       {a['id']} ({a['size'] / 1e6:.1f} MB)")
+                          break
+                      print(f"digest mismatch for {a['id']}: {got} != {a['sha256']}")
+                      os.remove(dest)
+                  elif os.path.exists(dest):
+                      os.remove(dest)
+                  wait = 10 * attempt
+                  print(f"attempt {attempt} failed for {a['id']}, waiting {wait}s")
+                  time.sleep(wait)
+              else:
+                  failed.append(a['id'])
+
+          if failed:
+              msg = 'could not fetch: ' + ', '.join(failed)
+              print(f'::error title=Asset prefetch::{msg}')
+              sys.exit(1)
+          print('all debug assets present and verified')
+          PY
 
       - name: Build the companion assets payload
         id: assets
@@ -261,32 +313,12 @@ jobs:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
         run: |
           set -o pipefail
-          # assetsDownloadDebug failed once on "HTTP status 404" for
-          # android-sdk-arm64-v8a.zip, yet a ranged GET against that same URL served bytes
-          # minutes later, so the asset host drops requests intermittently rather than
-          # having lost the file. DownloadUtils does not retry, and a ~1.2 GB download over
-          # nine files is long enough that a single blip wastes the whole job. Downloads
-          # already present and matching their pinned digest are skipped, so a retry only
-          # re-fetches what is actually missing.
-          for attempt in 1 2 3; do
-            echo "::group::Assets payload attempt $attempt"
-            if ./gradlew :app:assetsDownloadDebug :app:assembleV8Assets \
-              --no-daemon --max-workers=2 \
-              -Dorg.gradle.jvmargs="-Xmx3584m -XX:MaxMetaspaceSize=1g --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED" \
-              -Dorg.gradle.parallel=false \
-              2>&1 | tee assets.log; then
-              echo "::endgroup::"
-              exit 0
-            fi
-            echo "::endgroup::"
-            echo "Attempt $attempt failed."
-            [ "$attempt" -lt 3 ] && sleep 30
-          done
-          echo "::error title=Assets payload::all 3 attempts failed"
-          exit 1
+          ./gradlew :app:assetsDownloadDebug :app:assembleV8Assets \
+            --no-daemon --max-workers=2 \
+            -Dorg.gradle.jvmargs="-Xmx3584m -XX:MaxMetaspaceSize=1g --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED" \
+            -Dorg.gradle.parallel=false \
+            2>&1 | tee assets.log
 
-      # The assemble step has its own reporter; this one covers the payload build, whose failure
-      # was invisible because annotations are the only channel readable here.
       - name: Report an assets payload failure
         if: failure() && steps.assets.outcome == 'failure'
         run: |
